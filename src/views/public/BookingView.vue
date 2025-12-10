@@ -14,149 +14,218 @@
           </div>
 
           <!-- Booking Steps -->
-          <q-stepper v-model="step" color="primary" animated class="q-mt-md">
+          <div class="booking-steps">
             <!-- Step 1: Service Selection -->
-            <q-step :name="1" title="Choisir un service" icon="spa" :done="step > 1">
-              <q-list>
-                <q-item v-for="service in visibleServices" :key="service.id" clickable @click="selectService(service)"
-                  :class="{ 'bg-primary-1': selectedService?.id === service.id }">
-                  <q-item-section>
-                    <q-item-label>{{ service.name }}</q-item-label>
-                    <q-item-label caption>{{ service.description }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <div class="text-h6">{{ formatPrice(service.price) }}</div>
-                    <div class="text-caption">{{ service.duration }} min</div>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-
-              <div class="row justify-end q-mt-lg">
-                <q-btn label="Suivant" color="primary" :disable="!selectedService" @click="step = 2" unelevated />
+            <div v-show="step === 1" class="booking-step">
+              <div class="step-header">
+                <span class="step-number">1.</span>
+                <span class="step-title">Choix de la prestation</span>
               </div>
-            </q-step>
+
+              <div class="step-content">
+                <q-list bordered>
+                  <q-item v-for="service in visibleServices" :key="service.id" clickable @click="selectService(service)"
+                    :class="{ 'bg-primary-1': selectedService?.id === service.id }">
+                    <q-item-section>
+                      <q-item-label>{{ service.name }}</q-item-label>
+                      <q-item-label caption v-if="service.description">{{ service.description }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <div class="text-body2">{{ service.duration }}min • {{ formatPrice(service.price) }}</div>
+                      <q-btn :label="selectedService?.id === service.id ? 'Sélectionné' : 'Choisir'"
+                        :color="selectedService?.id === service.id ? 'primary' : 'grey-8'"
+                        :text-color="selectedService?.id === service.id ? 'white' : 'white'" size="sm" unelevated
+                        class="q-mt-xs" />
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </div>
+            </div>
+
+            <!-- Selected Service Display (always visible when selected) -->
+            <div v-if="selectedService && step > 1" class="selected-service-card q-mb-md">
+              <div class="step-header q-mb-sm">
+                <span class="step-number">1.</span>
+                <span class="step-title">Prestation sélectionnée</span>
+              </div>
+              <q-card class="q-pa-md">
+                <div class="row items-center justify-between">
+                  <div class="col">
+                    <div class="text-h6 q-mb-xs">{{ selectedService.name }}</div>
+                    <div class="text-body2 text-grey-7">
+                      {{ selectedService.duration }}min • {{ formatPrice(selectedService.price) }}
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <q-btn flat label="Modifier" color="primary" size="sm" @click="step = 1" />
+                  </div>
+                </div>
+              </q-card>
+            </div>
 
             <!-- Step 2: Date & Time -->
-            <q-step :name="2" title="Choisir date et heure" icon="event" :done="step > 2">
-              <div class="date-time-selection">
-                <!-- Week Navigation -->
-                <div class="row items-center justify-center q-mb-md">
-                  <q-btn flat dense icon="chevron_left" @click="previousWeek" />
-                  <div class="text-subtitle2 q-mx-md">
-                    {{ weekStart.format('DD MMM') }} - {{ weekEnd.format('DD MMM YYYY') }}
-                  </div>
-                  <q-btn flat dense icon="chevron_right" @click="nextWeek" />
-                </div>
+            <div v-show="step === 2" class="booking-step">
+              <div class="step-header">
+                <span class="step-number">2.</span>
+                <span class="step-title">Choix de la date & heure</span>
+              </div>
 
-                <!-- Desktop: Days Grid -->
-                <div class="days-grid gt-xs">
-                  <div v-for="day in weekDays" :key="day.date" class="day-column"
-                    :class="{ 'day-disabled': !isDayAvailable(day.date) }">
-                    <div class="day-header">
-                      <div class="day-name">{{ day.dayName }}</div>
-                      <div class="day-date">{{ day.dateLabel }}</div>
+              <div class="step-content">
+                <div class="date-time-selection">
+                  <!-- Week Navigation -->
+                  <div class="row items-center justify-center q-mb-md">
+                    <q-btn flat dense icon="chevron_left" @click="previousWeek" />
+                    <div class="text-subtitle2 q-mx-md">
+                      {{ weekStart.format('DD MMM') }} - {{ weekEnd.format('DD MMM YYYY') }}
                     </div>
-                    <div class="time-slots">
-                      <q-btn v-for="slot in getAvailableSlotsForDay(day.date)" :key="slot" :label="slot"
-                        :color="isSlotSelected(day.date, slot) ? 'primary' : 'grey-4'"
-                        :text-color="isSlotSelected(day.date, slot) ? 'white' : 'dark'" size="sm" unelevated
-                        class="time-slot-btn" @click="selectTimeSlot(day.date, slot)" />
-                      <div v-if="getAvailableSlotsForDay(day.date).length === 0"
-                        class="no-slots text-grey-6 text-caption">
-                        Aucun créneau
+                    <q-btn flat dense icon="chevron_right" @click="nextWeek" />
+                  </div>
+
+                  <!-- Desktop: Days Grid -->
+                  <div class="days-grid gt-xs">
+                    <div v-for="day in weekDays" :key="day.date" class="day-column"
+                      :class="{ 'day-disabled': !isDayAvailable(day.date) }">
+                      <div class="day-header">
+                        <div class="day-name">{{ day.dayName }}</div>
+                        <div class="day-date">{{ day.dateLabel }}</div>
+                      </div>
+                      <div class="time-slots">
+                        <q-btn v-for="slot in getAvailableSlotsForDay(day.date)" :key="slot" :label="slot"
+                          :color="isSlotSelected(day.date, slot) ? 'primary' : 'grey-4'"
+                          :text-color="isSlotSelected(day.date, slot) ? 'white' : 'dark'" size="sm" unelevated
+                          class="time-slot-btn" @click="selectTimeSlot(day.date, slot)" />
+                        <div v-if="getAvailableSlotsForDay(day.date).length === 0"
+                          class="no-slots text-grey-6 text-caption">
+                          Aucun créneau
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <!-- Mobile: Accordion List -->
-                <div class="days-accordion xs">
-                  <q-list bordered>
-                    <q-expansion-item v-for="day in weekDays" :key="day.date"
-                      :label="`${day.dayName} ${day.fullDateLabel}`" :disable="!isDayAvailable(day.date)"
-                      :default-opened="getAvailableSlotsForDay(day.date).length > 0 && isDayAvailable(day.date)"
-                      header-class="day-accordion-header" expand-icon-class="day-accordion-icon"
-                      :class="{ 'day-disabled-accordion': !isDayAvailable(day.date) }">
-                      <template v-slot:header>
-                        <q-item-section>
-                          <q-item-label>
-                            {{ capitalizeFirst(day.dayName) }} {{ day.fullDateLabel }}
-                          </q-item-label>
-                        </q-item-section>
-                        <q-item-section side v-if="getAvailableSlotsForDay(day.date).length > 0">
-                          <q-badge :label="getAvailableSlotsForDay(day.date).length" color="primary" />
-                        </q-item-section>
-                      </template>
+                  <!-- Mobile: Accordion List -->
+                  <div class="days-accordion xs">
+                    <q-list bordered>
+                      <q-expansion-item v-for="day in weekDays" :key="day.date"
+                        :label="`${day.dayName} ${day.fullDateLabel}`" :disable="!isDayAvailable(day.date)"
+                        :default-opened="getAvailableSlotsForDay(day.date).length > 0 && isDayAvailable(day.date)"
+                        header-class="day-accordion-header" expand-icon-class="day-accordion-icon"
+                        :class="{ 'day-disabled-accordion': !isDayAvailable(day.date) }">
+                        <template v-slot:header>
+                          <q-item-section>
+                            <q-item-label>
+                              {{ capitalizeFirst(day.dayName) }} {{ day.fullDateLabel }}
+                            </q-item-label>
+                          </q-item-section>
+                          <q-item-section side v-if="getAvailableSlotsForDay(day.date).length > 0">
+                            <q-badge :label="getAvailableSlotsForDay(day.date).length" color="primary" />
+                          </q-item-section>
+                        </template>
 
-                      <q-card>
-                        <q-card-section class="q-pa-sm">
-                          <div v-if="getAvailableSlotsForDay(day.date).length > 0" class="time-slots-mobile">
-                            <q-btn v-for="slot in getAvailableSlotsForDay(day.date)" :key="slot" :label="slot"
-                              :color="isSlotSelected(day.date, slot) ? 'primary' : 'grey-4'"
-                              :text-color="isSlotSelected(day.date, slot) ? 'white' : 'dark'" size="sm" unelevated
-                              class="time-slot-btn-mobile q-mr-xs q-mb-xs" @click="selectTimeSlot(day.date, slot)" />
-                          </div>
-                          <div v-else class="text-center text-grey-6 q-pa-md">
-                            Aucun créneau disponible
-                          </div>
-                        </q-card-section>
-                      </q-card>
-                    </q-expansion-item>
-                  </q-list>
+                        <q-card>
+                          <q-card-section class="q-pa-sm">
+                            <div v-if="getAvailableSlotsForDay(day.date).length > 0" class="time-slots-mobile">
+                              <q-btn v-for="slot in getAvailableSlotsForDay(day.date)" :key="slot" :label="slot"
+                                :color="isSlotSelected(day.date, slot) ? 'primary' : 'grey-4'"
+                                :text-color="isSlotSelected(day.date, slot) ? 'white' : 'dark'" size="sm" unelevated
+                                class="time-slot-btn-mobile q-mr-xs q-mb-xs" @click="selectTimeSlot(day.date, slot)" />
+                            </div>
+                            <div v-else class="text-center text-grey-6 q-pa-md">
+                              Aucun créneau disponible
+                            </div>
+                          </q-card-section>
+                        </q-card>
+                      </q-expansion-item>
+                    </q-list>
+                  </div>
+
+                  <div class="row justify-end q-mt-md">
+                    <q-btn label="Suivant" color="primary" :disable="!selectedDate || !selectedTime" @click="step = 3"
+                      unelevated />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div class="row justify-between q-mt-lg">
-                <q-btn flat label="Précédent" @click="step = 1" />
-                <q-btn label="Suivant" color="primary" :disable="!selectedDate || !selectedTime" @click="step = 3"
-                  unelevated />
+            <!-- Selected Date & Time Display (always visible when selected) -->
+            <div v-if="selectedDate && selectedTime && step > 2" class="selected-datetime-card q-mb-md">
+              <div class="step-header q-mb-sm">
+                <span class="step-number">2.</span>
+                <span class="step-title">Date & heure sélectionnées</span>
               </div>
-            </q-step>
+              <q-card class="q-pa-md">
+                <div class="row items-center justify-between">
+                  <div class="col">
+                    <div class="text-h6 q-mb-xs">
+                      {{ dayjs(selectedDate).format('dddd D MMMM YYYY') }}
+                    </div>
+                    <div class="text-body2 text-grey-7">
+                      {{ selectedTime }}
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <q-btn flat label="Modifier" color="primary" size="sm" @click="step = 2" />
+                  </div>
+                </div>
+              </q-card>
+            </div>
 
             <!-- Step 3: Customer Info -->
-            <q-step :name="3" title="Vos informations" icon="person" :done="step > 3">
-              <q-form @submit="confirmBooking" class="q-gutter-md q-mt-md">
-                <q-input v-model="customerForm.name" label="Nom complet *" :rules="[val => !!val || 'Requis']"
-                  outlined />
+            <div v-show="step === 3" class="booking-step">
+              <div class="step-header">
+                <span class="step-number">3.</span>
+                <span class="step-title">Vos informations</span>
+              </div>
 
-                <q-input v-model="customerForm.email" label="Email *" type="email" :rules="[val => !!val || 'Requis']"
-                  outlined />
+              <div class="step-content">
+                <q-form @submit="confirmBooking" class="q-gutter-md q-mt-md">
+                  <q-input v-model="customerForm.name" label="Nom complet *" :rules="[val => !!val || 'Requis']"
+                    outlined />
 
-                <q-input v-model="customerForm.phone" label="Téléphone *" :rules="[val => !!val || 'Requis']"
-                  outlined />
+                  <q-input v-model="customerForm.email" label="Email *" type="email" :rules="[val => !!val || 'Requis']"
+                    outlined />
 
-                <div class="row justify-between q-mt-lg">
-                  <q-btn flat label="Précédent" @click="step = 2" />
-                  <q-btn type="submit" label="Confirmer" color="primary" :loading="bookingLoading" unelevated />
-                </div>
-              </q-form>
-            </q-step>
+                  <q-input v-model="customerForm.phone" label="Téléphone *" :rules="[val => !!val || 'Requis']"
+                    outlined />
+
+                  <div class="row justify-end q-mt-lg">
+                    <q-btn type="submit" label="Confirmer" color="primary" :loading="bookingLoading" unelevated />
+                  </div>
+                </q-form>
+              </div>
+            </div>
 
             <!-- Step 4: Confirmation -->
-            <q-step :name="4" title="Confirmation" icon="check_circle">
-              <div class="text-center q-pa-lg">
-                <q-icon name="check_circle" size="80px" color="positive" />
-                <div class="text-h5 q-mt-md">Rendez-vous confirmé !</div>
-                <div class="text-grey-7 q-mt-sm q-mb-md">
-                  Un email de confirmation a été envoyé à {{ customerForm.email }}
-                </div>
-                <div class="text-caption text-grey-6 q-mt-md">
-                  Vous pouvez annuler votre rendez-vous via le lien dans l'email de confirmation.
-                </div>
-                <div v-if="appointmentData?.cancellation_token" class="q-mt-md">
-                  <q-separator class="q-mb-md" />
-                  <div class="text-caption text-grey-7">
-                    Lien d'annulation direct :
+            <div v-show="step === 4" class="booking-step">
+              <div class="step-header">
+                <span class="step-number">4.</span>
+                <span class="step-title">Confirmation</span>
+              </div>
+
+              <div class="step-content">
+                <div class="text-center q-pa-lg">
+                  <q-icon name="check_circle" size="80px" color="positive" />
+                  <div class="text-h5 q-mt-md">Rendez-vous confirmé !</div>
+                  <div class="text-grey-7 q-mt-sm q-mb-md">
+                    Un email de confirmation a été envoyé à {{ customerForm.email }}
                   </div>
-                  <q-input :model-value="cancelUrl" readonly outlined dense class="q-mt-xs">
-                    <template v-slot:append>
-                      <q-btn icon="content_copy" flat dense @click="copyCancelUrl" />
-                    </template>
-                  </q-input>
+                  <div class="text-caption text-grey-6 q-mt-md">
+                    Vous pouvez annuler votre rendez-vous via le lien dans l'email de confirmation.
+                  </div>
+                  <div v-if="appointmentData?.cancellation_token" class="q-mt-md">
+                    <q-separator class="q-mb-md" />
+                    <div class="text-caption text-grey-7">
+                      Lien d'annulation direct :
+                    </div>
+                    <q-input :model-value="cancelUrl" readonly outlined dense class="q-mt-xs">
+                      <template v-slot:append>
+                        <q-btn icon="content_copy" flat dense @click="copyCancelUrl" />
+                      </template>
+                    </q-input>
+                  </div>
                 </div>
               </div>
-            </q-step>
-          </q-stepper>
+            </div>
+          </div>
         </div>
 
         <div v-else class="text-center q-pa-lg">
@@ -263,6 +332,8 @@ async function loadServices(businessId) {
 
 function selectService(service) {
   selectedService.value = service
+  // Automatically go to next step
+  step.value = 2
 }
 
 // Week navigation
@@ -382,6 +453,8 @@ function getAvailableSlotsForDay(date) {
 function selectTimeSlot(date, time) {
   selectedDate.value = date
   selectedTime.value = time
+  // Automatically advance to customer info step
+  step.value = 3
 }
 
 function isSlotSelected(date, time) {
@@ -557,6 +630,67 @@ async function confirmBooking() {
 
   .days-accordion.xs {
     display: block;
+  }
+}
+
+/* Booking Steps Custom Display */
+.booking-steps {
+  margin-top: 16px;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.step-number {
+  color: rgb(5, 128, 58);
+  font-size: 18px;
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.step-title {
+  color: rgb(5, 128, 58);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.step-content {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.selected-service-card,
+.selected-datetime-card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.selected-service-card .q-card,
+.selected-datetime-card .q-card {
+  background: #f5f5f5;
+}
+
+@media (max-width: 600px) {
+  .step-number {
+    font-size: 16px;
+  }
+
+  .step-title {
+    font-size: 16px;
+  }
+
+  .step-content {
+    padding: 12px;
+  }
+
+  .selected-service-card {
+    padding: 12px;
   }
 }
 </style>
