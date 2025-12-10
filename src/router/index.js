@@ -1,0 +1,149 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+const routes = [
+  // Main app routes (with header)
+  {
+    path: '/',
+    component: () => import('../layouts/MainLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'home',
+        component: () => import('../views/HomeView.vue')
+      },
+      {
+        path: 'login',
+        name: 'login',
+        component: () => import('../views/auth/LoginView.vue'),
+        meta: { requiresGuest: true }
+      },
+      {
+        path: 'signup',
+        name: 'signup',
+        component: () => import('../views/auth/SignupView.vue'),
+        meta: { requiresGuest: true }
+      },
+      {
+        path: 'onboarding',
+        name: 'onboarding',
+        component: () => import('../views/onboarding/OnboardingView.vue'),
+        meta: { requiresAuth: true, requiresNoBusiness: true }
+      },
+      {
+        path: 'dashboard',
+        name: 'dashboard',
+        component: () => import('../views/dashboard/DashboardView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      },
+      {
+        path: 'calendar',
+        name: 'calendar',
+        component: () => import('../views/calendar/CalendarView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      },
+      {
+        path: 'services',
+        name: 'services',
+        component: () => import('../views/services/ServicesView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      },
+      {
+        path: 'appointments',
+        name: 'appointments',
+        component: () => import('../views/appointments/AppointmentsView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      },
+      {
+        path: 'settings',
+        name: 'settings',
+        component: () => import('../views/settings/SettingsView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      }
+    ]
+  },
+  // Public routes (no auth, no layout header) - MUST come before /:slug catch-all
+  {
+    path: '/book/:slug',
+    name: 'public-booking',
+    component: () => import('../views/public/BookingView.vue')
+  },
+  {
+    path: '/cancel/:token',
+    name: 'cancel-appointment',
+    component: () => import('../views/public/CancelAppointmentView.vue')
+  },
+  // Public business page (must be last to catch /:slug)
+  {
+    path: '/:slug',
+    name: 'public-business',
+    component: () => import('../views/public/BusinessView.vue')
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+// Track if initial auth check has been done
+let authInitialized = false
+
+router.beforeEach(async (to, from, next) => {
+  // Dynamic imports to avoid circular dependencies
+  const authModule = await import('../stores/auth')
+  const businessModule = await import('../stores/business')
+
+  const authStore = authModule.useAuthStore()
+  const businessStore = businessModule.useBusinessStore()
+
+  // Initialize auth on first navigation if not already done
+  if (!authInitialized) {
+    authInitialized = true
+    await authStore.init()
+  }
+
+  // Wait if initialization is in progress
+  if (authStore.loading) {
+    await new Promise((resolve) => {
+      const checkLoading = setInterval(() => {
+        if (!authStore.loading) {
+          clearInterval(checkLoading)
+          resolve()
+        }
+      }, 50)
+    })
+  }
+
+  const isAuthenticated = authStore.isAuthenticated
+  const hasBusiness = businessStore.hasBusiness
+
+  // If user is authenticated and on home page, redirect to dashboard or onboarding
+  if (to.name === 'home' && isAuthenticated) {
+    return next(hasBusiness ? { path: '/dashboard' } : { path: '/onboarding' })
+  }
+
+  // Guest routes - redirect if already authenticated
+  if (to.meta.requiresGuest && isAuthenticated) {
+    return next(hasBusiness ? { path: '/dashboard' } : { path: '/onboarding' })
+  }
+
+  // Auth required - redirect to login if not authenticated
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    return next({ path: '/login', query: { redirect: to.fullPath } })
+  }
+
+  // Business required - redirect to onboarding if no business
+  if (to.meta.requiresBusiness && !hasBusiness) {
+    return next({ path: '/onboarding' })
+  }
+
+  // No business required (onboarding) - redirect to dashboard if business exists
+  if (to.meta.requiresNoBusiness && hasBusiness) {
+    return next({ path: '/dashboard' })
+  }
+
+  next()
+})
+
+export default router
+

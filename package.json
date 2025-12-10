@@ -1,0 +1,29 @@
+{
+  "name": "vazy",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:pwa": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@quasar/extras": "^1.16.9",
+    "@supabase/supabase-js": "^2.39.0",
+    "dayjs": "^1.11.10",
+    "dexie": "^4.0.0",
+    "pinia": "^2.1.7",
+    "quasar": "^2.14.1",
+    "vue": "^3.4.15",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@quasar/vite-plugin": "^1.5.0",
+    "@vitejs/plugin-vue": "^5.0.3",
+    "sass": "^1.95.0",
+    "sass-embedded": "^1.93.3",
+    "vite": "^5.0.11",
+    "vite-plugin-pwa": "^0.17.4"
+  }
+}
