@@ -23,22 +23,32 @@
               </div>
 
               <div class="step-content">
-                <q-list bordered>
-                  <q-item v-for="service in visibleServices" :key="service.id" clickable @click="selectService(service)"
-                    :class="{ 'bg-primary-1': selectedService?.id === service.id }">
-                    <q-item-section>
-                      <q-item-label>{{ service.name }}</q-item-label>
-                      <q-item-label caption v-if="service.description">{{ service.description }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <div class="text-body2">{{ service.duration }}min • {{ formatPrice(service.price) }}</div>
-                      <q-btn :label="selectedService?.id === service.id ? 'Sélectionné' : 'Choisir'"
-                        :color="selectedService?.id === service.id ? 'primary' : 'grey-8'"
-                        :text-color="selectedService?.id === service.id ? 'white' : 'white'" size="sm" unelevated
-                        class="q-mt-xs" />
-                    </q-item-section>
-                  </q-item>
-                </q-list>
+                <div v-if="groupedServices.length > 0">
+                  <div v-for="category in groupedServices" :key="category.id || 'no-category'" class="q-mb-lg">
+                    <div v-if="category.name" class="text-subtitle1 q-mb-sm q-px-sm text-weight-medium">
+                      {{ category.name }}
+                    </div>
+                    <q-list bordered>
+                      <q-item v-for="service in category.services" :key="service.id" clickable
+                        @click="selectService(service)" :class="{ 'bg-primary-1': selectedService?.id === service.id }">
+                        <q-item-section>
+                          <q-item-label>{{ service.name }}</q-item-label>
+                          <q-item-label caption v-if="service.description">{{ service.description }}</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <div class="text-body2">{{ service.duration }}min • {{ formatPrice(service.price) }}</div>
+                          <q-btn :label="selectedService?.id === service.id ? 'Sélectionné' : 'Choisir'"
+                            :color="selectedService?.id === service.id ? 'primary' : 'grey-8'"
+                            :text-color="selectedService?.id === service.id ? 'white' : 'white'" size="sm" unelevated
+                            class="q-mt-xs" />
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </div>
+                </div>
+                <div v-else class="text-grey-7 text-center q-pa-md">
+                  Aucun service disponible pour le moment.
+                </div>
               </div>
             </div>
 
@@ -56,7 +66,7 @@
                       {{ selectedService.duration }}min • {{ formatPrice(selectedService.price) }}
                     </div>
                   </div>
-                  <div class="col-auto">
+                  <div class="col-auto" v-if="step !== 4">
                     <q-btn flat label="Modifier" color="primary" size="sm" @click="step = 1" />
                   </div>
                 </div>
@@ -162,7 +172,7 @@
                       {{ selectedTime }}
                     </div>
                   </div>
-                  <div class="col-auto">
+                  <div class="col-auto" v-if="step !== 4">
                     <q-btn flat label="Modifier" color="primary" size="sm" @click="step = 2" />
                   </div>
                 </div>
@@ -256,6 +266,7 @@ const { showNotification } = useNotifications()
 
 const business = ref(null)
 const services = ref([])
+const categories = ref([])
 const loading = ref(true)
 const step = ref(1)
 const selectedService = ref(null)
@@ -290,6 +301,58 @@ const visibleServices = computed(() => {
   return services.value.filter(s => s.visible)
 })
 
+// Group services by category
+const groupedServices = computed(() => {
+  if (!visibleServices.value || visibleServices.value.length === 0) {
+    return []
+  }
+
+  const groups = {}
+
+  // First, add all categories
+  categories.value.forEach(category => {
+    groups[category.id] = {
+      id: category.id,
+      name: category.name,
+      display_order: category.display_order || 0,
+      services: []
+    }
+  })
+
+  // Add services to their categories
+  visibleServices.value.forEach(service => {
+    const categoryId = service.category_id
+    if (categoryId && groups[categoryId]) {
+      groups[categoryId].services.push(service)
+    } else {
+      // Services without category
+      if (!groups['no-category']) {
+        groups['no-category'] = {
+          id: null,
+          name: null,
+          display_order: 9999,
+          services: []
+        }
+      }
+      groups['no-category'].services.push(service)
+    }
+  })
+
+  // Convert to array and sort by display_order, then name
+  const result = Object.values(groups)
+    .filter(group => group.services.length > 0)
+    .sort((a, b) => {
+      if (a.display_order !== b.display_order) {
+        return a.display_order - b.display_order
+      }
+      if (!a.name && b.name) return 1
+      if (a.name && !b.name) return -1
+      return (a.name || '').localeCompare(b.name || '')
+    })
+
+  return result
+})
+
 onMounted(async () => {
   const slug = route.params.slug
   await loadBusiness(slug)
@@ -305,7 +368,10 @@ async function loadBusiness(slug) {
 
     if (data) {
       business.value = data
-      await loadServices(data.id)
+      await Promise.all([
+        loadServices(data.id),
+        loadCategories(data.id)
+      ])
     }
   } catch (error) {
     console.error('Load business error:', error)
@@ -327,6 +393,23 @@ async function loadServices(businessId) {
     }
   } catch (error) {
     console.error('Load services error:', error)
+  }
+}
+
+async function loadCategories(businessId) {
+  try {
+    const { data, error } = await supabase
+      .from('service_categories')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('display_order', { ascending: true })
+      .order('name', { ascending: true })
+
+    if (data) {
+      categories.value = data
+    }
+  } catch (error) {
+    console.error('Load categories error:', error)
   }
 }
 
