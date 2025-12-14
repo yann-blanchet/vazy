@@ -10,10 +10,20 @@
 </template>
 
 <script setup>
+import { watch, computed } from 'vue'
 import { useNotifications } from './composables/useNotifications'
+import { useBusinessStore } from './stores/business'
 import ModernNotification from './components/ModernNotification.vue'
 
 const { notifications, removeNotification } = useNotifications()
+const businessStore = useBusinessStore()
+
+const businessName = computed(() => businessStore.business?.business_name || 'Vazy')
+
+// Update document title when business name changes
+watch(businessName, (newName) => {
+  document.title = `${newName} - Réservation en ligne`
+}, { immediate: true })
 
 // Auth initialization is handled in router guard
 // This ensures it happens before navigation

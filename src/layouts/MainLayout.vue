@@ -4,7 +4,7 @@
       <q-toolbar>
         <q-toolbar-title>
           <router-link to="/" class="text-white" style="text-decoration: none">
-            Vazy
+            {{ businessName }}
           </router-link>
         </q-toolbar-title>
 
@@ -40,12 +40,16 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useBusinessStore } from '../stores/business'
 import { useNotifications } from '../composables/useNotifications'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const businessStore = useBusinessStore()
 const { showNotification } = useNotifications()
+
+const businessName = computed(() => businessStore.business?.business_name || 'Vazy')
 
 // Determine active tab based on current route
 const activeTab = computed(() => {
