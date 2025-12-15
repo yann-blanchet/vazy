@@ -214,6 +214,16 @@
               outlined
               class="q-mb-sm"
             />
+            <q-input
+              v-model.number="appointmentForm.duration"
+              type="number"
+              label="Durée (minutes)"
+              dense
+              outlined
+              class="q-mb-sm"
+              :min="5"
+              :step="5"
+            />
             <div class="row q-col-gutter-sm">
               <div class="col-6">
                 <q-input
@@ -324,10 +334,17 @@ function buildHourSlotsForDate(date) {
       continue
     }
 
+    const slotStart = current
+    const slotEnd = current.add(1, 'hour')
+
     const slotAppointments = appointmentsStore.appointments
-      .filter(apt =>
-        dayjs(apt.appointment_date).isSame(current, 'hour')
-      )
+      .filter(apt => {
+        const aptStart = dayjs(apt.appointment_date)
+        const durationMinutes = apt.service_duration || 60
+        const aptEnd = aptStart.add(durationMinutes, 'minute')
+        // Chevauchement entre [aptStart, aptEnd[ et [slotStart, slotEnd[
+        return aptStart.isBefore(slotEnd) && aptEnd.isAfter(slotStart)
+      })
       .sort(
         (a, b) =>
           new Date(a.appointment_date) - new Date(b.appointment_date)
@@ -404,7 +421,8 @@ const appointmentForm = reactive({
   customer_name: '',
   customer_email: '',
   customer_phone: '',
-  service_id: null
+  service_id: null,
+  duration: null // en minutes
 })
 
 const serviceOptions = computed(() =>
@@ -427,6 +445,7 @@ function resetAppointmentForm() {
   appointmentForm.customer_email = ''
   appointmentForm.customer_phone = ''
   appointmentForm.service_id = null
+  appointmentForm.duration = null
 }
 
 function openCreateDialog(day, slot) {
@@ -435,9 +454,15 @@ function openCreateDialog(day, slot) {
   appointmentDialog.appointmentId = null
   appointmentDialog.date = day.date
   appointmentDialog.time = slot.time
-  appointmentDialog.displayDate = day.label
-  appointmentDialog.displayTime = slot.time
   resetAppointmentForm()
+
+  // Pré-remplir la durée avec celle du service sélectionné, si disponible
+  const selectedService = servicesStore.services.find(
+    s => s.id === appointmentForm.service_id
+  )
+  if (selectedService?.duration) {
+    appointmentForm.duration = selectedService.duration
+  }
 }
 
 function openEditDialog(appointment) {
@@ -446,13 +471,12 @@ function openEditDialog(appointment) {
   appointmentDialog.appointmentId = appointment.id
   appointmentDialog.date = dayjs(appointment.appointment_date).format('YYYY-MM-DD')
   appointmentDialog.time = dayjs(appointment.appointment_date).format('HH:mm')
-  appointmentDialog.displayDate = dayjs(appointment.appointment_date).format('dddd D/MM')
-  appointmentDialog.displayTime = appointmentDialog.time
 
   appointmentForm.customer_name = appointment.customer_name
   appointmentForm.customer_email = appointment.customer_email
   appointmentForm.customer_phone = appointment.customer_phone
   appointmentForm.service_id = appointment.service_id || null
+  appointmentForm.duration = appointment.service_duration || null
 }
 
 function handleSlotClick(day, slot) {
@@ -468,23 +492,28 @@ async function submitAppointment() {
 
   const dateTime = dayjs(`${appointmentDialog.date} ${appointmentDialog.time}`).toISOString()
 
-   // Récupérer les infos du service sélectionné pour garder le nom / prix / durée à jour
+  // Récupérer les infos du service sélectionné pour garder le nom / prix / durée à jour
   const selectedService = servicesStore.services.find(
     s => s.id === appointmentForm.service_id
   )
+
+  const effectiveDuration =
+    appointmentForm.duration ||
+    selectedService?.duration ||
+    60
 
   const servicePayload = selectedService
     ? {
         service_id: selectedService.id,
         service_name: selectedService.name,
         service_price: selectedService.price ?? null,
-        service_duration: selectedService.duration ?? null
+        service_duration: effectiveDuration
       }
     : {
         service_id: appointmentForm.service_id,
         service_name: null,
         service_price: null,
-        service_duration: null
+        service_duration: effectiveDuration
       }
 
   if (appointmentDialog.isEdit && appointmentDialog.appointmentId) {
