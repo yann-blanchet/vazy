@@ -3,25 +3,79 @@
     <div class="row q-mb-lg">
       <div class="col">
         <div class="text-h4">Tableau de bord</div>
-        <div class="text-grey-7">{{ businessStore.business?.business_name }}</div>
       </div>
     </div>
 
-    <!-- Calendrier horaire : aujourd'hui et prochains jours -->
+    <!-- Upcoming Appointments (on top) -->
     <div class="row q-mt-md">
       <div class="col-12">
         <q-card>
           <q-card-section>
-            <div class="row items-center q-mb-md">
+            <div class="row items-center q-mb-sm">
               <div class="col">
-                <div class="text-h6">Planning des créneaux</div>
-                <div class="text-caption text-grey">
-                  Créneaux horaires ouverts pour aujourd'hui et les prochains jours
-                </div>
+                <div class="text-h6">Prochains rendez-vous</div>
               </div>
             </div>
 
-            <div class="row q-col-gutter-md">
+            <q-list v-if="appointmentsStore.upcomingAppointments.length > 0">
+              <q-item
+                v-for="apt in appointmentsStore.upcomingAppointments.slice(0, 5)"
+                :key="apt.id"
+                clickable
+                @click="viewAppointment(apt)"
+              >
+                <q-item-section avatar>
+                  <q-icon name="event" color="primary" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ apt.customer_name }}</q-item-label>
+                  <q-item-label caption>
+                    {{ formatDate(apt.appointment_date) }} à {{ formatTime(apt.appointment_date) }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-badge :color="getStatusColor(apt.status)">
+                    {{ apt.status }}
+                  </q-badge>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <div v-else class="text-center q-pa-md text-grey">
+              Aucun rendez-vous à venir
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Calendrier : vue créneaux / vue semaine -->
+    <div class="row q-mt-lg">
+      <div class="col-12">
+        <q-card>
+          <q-card-section>
+            <div class="row justify-center q-mb-md">
+              <div class="col-auto">
+                <q-btn-toggle
+                  v-model="calendarMode"
+                  :options="[
+                    { label: 'Créneaux', value: 'hours', icon: 'schedule' },
+                    { label: 'Semaine', value: 'week', icon: 'view_week' }
+                  ]"
+                  dense
+                  unelevated
+                  rounded
+                  glossy
+                  color="primary"
+                  toggle-color="white"
+                  text-color="white"
+                  toggle-text-color="primary"
+                  class="bg-primary text-white shadow-1"
+                />
+              </div>
+            </div>
+
+            <!-- Vue créneaux (heures sur plusieurs jours) -->
+            <div v-if="calendarMode === 'hours'" class="row q-col-gutter-md">
               <!-- Colonnes par jour avec créneaux horaires -->
               <div
                 v-for="day in timeGridDays"
@@ -63,6 +117,46 @@
                 </div>
                 <div v-else class="text-grey-6 text-caption q-mt-sm">
                   Fermé
+                </div>
+              </div>
+            </div>
+
+            <!-- Vue semaine (rendez-vous groupés par jour de la semaine en cours) -->
+            <div v-else class="row q-col-gutter-md">
+              <div
+                v-for="day in weekDays"
+                :key="day.date"
+                class="col-12 col-sm-6 col-md-3"
+              >
+                <div class="text-subtitle2 q-mb-xs">
+                  {{ day.label }}
+                </div>
+                <div class="text-caption text-grey q-mb-xs">
+                  {{ day.appointments.length }} rendez-vous
+                </div>
+
+                <q-list v-if="day.appointments.length" dense bordered class="rounded-borders">
+                  <q-item
+                    v-for="apt in day.appointments"
+                    :key="apt.id"
+                    clickable
+                    v-ripple
+                    @click="openEditDialog(apt)"
+                  >
+                    <q-item-section>
+                      <q-item-label>{{ apt.customer_name }}</q-item-label>
+                      <q-item-label caption>
+                        {{ formatTime(apt.appointment_date) }} • {{ apt.service_name }}
+                      </q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-badge :color="getStatusColor(apt.status)" />
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+
+                <div v-else class="text-grey-6 text-caption q-mt-sm">
+                  Aucun rendez-vous
                 </div>
               </div>
             </div>
@@ -158,42 +252,6 @@
     </q-dialog>
 
     <!-- Upcoming Appointments -->
-    <div class="row q-mt-lg">
-      <div class="col-12">
-        <q-card>
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Prochains rendez-vous</div>
-            
-            <q-list v-if="appointmentsStore.upcomingAppointments.length > 0">
-              <q-item
-                v-for="apt in appointmentsStore.upcomingAppointments.slice(0, 5)"
-                :key="apt.id"
-                clickable
-                @click="viewAppointment(apt)"
-              >
-                <q-item-section avatar>
-                  <q-icon name="event" color="primary" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>{{ apt.customer_name }}</q-item-label>
-                  <q-item-label caption>
-                    {{ formatDate(apt.appointment_date) }} à {{ formatTime(apt.appointment_date) }}
-                  </q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-badge :color="getStatusColor(apt.status)">
-                    {{ apt.status }}
-                  </q-badge>
-                </q-item-section>
-              </q-item>
-            </q-list>
-            <div v-else class="text-center q-pa-md text-grey">
-              Aucun rendez-vous à venir
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
   </q-page>
 </template>
 
@@ -212,6 +270,9 @@ dayjs.locale('fr')
 const businessStore = useBusinessStore()
 const servicesStore = useServicesStore()
 const appointmentsStore = useAppointmentsStore()
+
+// Mode d'affichage du calendrier : créneaux horaires ou vue semaine
+const calendarMode = ref('hours')
 
 // Nombre de jours affichés : aujourd'hui + les 6 prochains (semaine glissante)
 const DAYS_AHEAD = 7
@@ -298,6 +359,33 @@ const timeGridDays = computed(() => {
         ? `Aujourd'hui - ${date.format('dddd D/MM')}`
         : date.format('dddd D/MM'),
       slots
+    }
+  })
+})
+
+// Vue semaine : rendez-vous groupés par jour de la semaine en cours
+const currentWeekStart = computed(() => dayjs().startOf('isoWeek'))
+
+const weekDays = computed(() => {
+  const start = currentWeekStart.value
+
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = start.add(index, 'day')
+    const dateStr = date.format('YYYY-MM-DD')
+
+    const dayAppointments = appointmentsStore.appointments
+      .filter(apt =>
+        dayjs(apt.appointment_date).format('YYYY-MM-DD') === dateStr
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.appointment_date) - new Date(b.appointment_date)
+      )
+
+    return {
+      date: dateStr,
+      label: date.format('dddd D/MM'),
+      appointments: dayAppointments
     }
   })
 })
