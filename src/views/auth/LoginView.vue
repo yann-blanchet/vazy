@@ -47,9 +47,10 @@ async function handleLogin() {
   const { error } = await authStore.signIn(email.value, password.value)
 
   if (error) {
+    console.error('Login error:', error)
     showNotification({
       type: 'error',
-      message: error.message || 'Erreur de connexion'
+      message: error.message || 'Erreur de connexion. Vérifiez vos identifiants.'
     })
   } else {
     const redirect = route.query.redirect || '/dashboard'

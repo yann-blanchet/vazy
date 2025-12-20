@@ -89,12 +89,14 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 import { useBusinessStore } from '../../stores/business'
 import { useNotifications } from '../../composables/useNotifications'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const businessStore = useBusinessStore()
 const { showNotification } = useNotifications()
 
@@ -132,14 +134,46 @@ function nextStep() {
   }
 }
 
+// Vérifier l'authentification au montage du composant
+onMounted(async () => {
+  // S'assurer que l'auth est initialisée
+  if (!authStore.isAuthenticated) {
+    await authStore.init()
+  }
+  
+  // Si toujours pas authentifié, rediriger vers login
+  if (!authStore.isAuthenticated) {
+    showNotification({
+      type: 'error',
+      message: 'Vous devez être connecté pour créer un commerce.',
+      timeout: 3000
+    })
+    router.push('/login')
+  }
+})
+
 async function createBusiness() {
   try {
     const { error } = await businessStore.createBusiness(form)
 
     if (error) {
+      console.error('Create business error:', error)
+      // Message d'erreur plus détaillé
+      let errorMessage = error.message || 'Erreur lors de la création du commerce'
+      
+      // Si l'erreur indique un problème d'authentification, suggérer de se reconnecter
+      if (error.message && (error.message.includes('authenticated') || error.message.includes('connecté'))) {
+        errorMessage = 'Vous n\'êtes pas connecté. Veuillez vous reconnecter.'
+        // Rediriger vers la page de connexion après un court délai
+        setTimeout(() => {
+          router.push('/login')
+        }, 2000)
+      }
+      
       showNotification({
         type: 'error',
-        message: error.message || 'Erreur lors de la création'
+        message: errorMessage,
+        timeout: 5000
       })
     } else {
       showNotification({
@@ -149,10 +183,10 @@ async function createBusiness() {
       router.push('/dashboard')
     }
   } catch (err) {
-    console.error('Create business error:', err)
+    console.error('Create business exception:', err)
     showNotification({
       type: 'error',
-      message: 'Une erreur est survenue'
+      message: err.message || 'Une erreur est survenue lors de la création du commerce'
     })
   }
 }

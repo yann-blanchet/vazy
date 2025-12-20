@@ -6,6 +6,27 @@
       </div>
     </div>
 
+    <!-- Public URL -->
+    <div class="row q-mt-md">
+      <div class="col-12">
+        <q-card>
+          <q-card-section>
+            <div class="row items-center q-mb-sm">
+              <div class="col">
+                <div class="text-h6">URL publique</div>
+                <div class="text-caption text-grey-7">Partagez ce lien avec vos clients pour qu'ils puissent réserver</div>
+              </div>
+            </div>
+            <q-input :model-value="publicUrl" readonly outlined class="q-mt-md">
+              <template v-slot:append>
+                <q-btn icon="content_copy" flat @click="copyUrl" />
+              </template>
+            </q-input>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
     <!-- Upcoming Appointments (on top) -->
     <div class="row q-mt-md">
       <div class="col-12">
@@ -48,126 +69,9 @@
       </div>
     </div>
 
-    <!-- Calendrier : vue créneaux / vue semaine -->
-    <div class="row q-mt-lg">
-      <div class="col-12">
-        <q-card>
-          <q-card-section>
-            <div class="row justify-center q-mb-md">
-              <div class="col-auto">
-                <q-btn-toggle
-                  v-model="calendarMode"
-                  :options="[
-                    { label: 'Créneaux', value: 'hours', icon: 'schedule' },
-                    { label: 'Semaine', value: 'week', icon: 'view_week' }
-                  ]"
-                  dense
-                  unelevated
-                  rounded
-                  glossy
-                  color="primary"
-                  toggle-color="white"
-                  text-color="white"
-                  toggle-text-color="primary"
-                  class="bg-primary text-white shadow-1"
-                />
-              </div>
-            </div>
-
-            <!-- Vue créneaux (heures sur plusieurs jours) -->
-            <div v-if="calendarMode === 'hours'" class="row q-col-gutter-md">
-              <!-- Colonnes par jour avec créneaux horaires -->
-              <div
-                v-for="day in timeGridDays"
-                :key="day.date"
-                class="col-12 col-md-4"
-              >
-                <div class="text-subtitle2 q-mb-xs">
-                  {{ day.label }}
-                </div>
-                <div v-if="day.slots.length">
-                  <q-list dense bordered class="rounded-borders">
-                    <q-item
-                      v-for="slot in day.slots"
-                      :key="slot.time"
-                      :class="{ 'bg-grey-2': slot.hasAppointments }"
-                      clickable
-                      v-ripple
-                      @click="handleSlotClick(day, slot)"
-                    >
-                      <q-item-section side top>
-                        <q-item-label>{{ slot.time }}</q-item-label>
-                      </q-item-section>
-                      <q-item-section>
-                        <q-item-label v-if="slot.appointments.length">
-                          {{ slot.appointments[0].customer_name }}
-                        </q-item-label>
-                        <q-item-label v-if="slot.appointments.length" caption>
-                          {{ slot.appointments[0].service_name }}
-                        </q-item-label>
-                        <q-item-label v-else caption class="text-grey-6">
-                          Libre
-                        </q-item-label>
-                      </q-item-section>
-                      <q-item-section side v-if="slot.appointments.length">
-                        <q-badge :color="getStatusColor(slot.appointments[0].status)" />
-                      </q-item-section>
-                    </q-item>
-                  </q-list>
-                </div>
-                <div v-else class="text-grey-6 text-caption q-mt-sm">
-                  Fermé
-                </div>
-              </div>
-            </div>
-
-            <!-- Vue semaine (rendez-vous groupés par jour de la semaine en cours) -->
-            <div v-else class="row q-col-gutter-md">
-              <div
-                v-for="day in weekDays"
-                :key="day.date"
-                class="col-12 col-sm-6 col-md-3"
-              >
-                <div class="text-subtitle2 q-mb-xs">
-                  {{ day.label }}
-                </div>
-                <div class="text-caption text-grey q-mb-xs">
-                  {{ day.appointments.length }} rendez-vous
-                </div>
-
-                <q-list v-if="day.appointments.length" dense bordered class="rounded-borders">
-                  <q-item
-                    v-for="apt in day.appointments"
-                    :key="apt.id"
-                    clickable
-                    v-ripple
-                    @click="openEditDialog(apt)"
-                  >
-                    <q-item-section>
-                      <q-item-label>{{ apt.customer_name }}</q-item-label>
-                      <q-item-label caption>
-                        {{ formatTime(apt.appointment_date) }} • {{ apt.service_name }}
-                      </q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-badge :color="getStatusColor(apt.status)" />
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-
-                <div v-else class="text-grey-6 text-caption q-mt-sm">
-                  Aucun rendez-vous
-                </div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
     <!-- Dialog prise / édition de rendez-vous -->
     <q-dialog v-model="appointmentDialog.visible" persistent>
-      <q-card style="max-width: 500px; width: 100%">
+      <q-card style="max-width: 500px; width: 90vw">
         <q-card-section>
           <div class="text-h6">
             {{ appointmentDialog.isEdit ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous' }}
@@ -270,6 +174,7 @@ import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useBusinessStore } from '../../stores/business'
 import { useServicesStore } from '../../stores/services'
 import { useAppointmentsStore } from '../../stores/appointments'
+import { useNotifications } from '../../composables/useNotifications'
 import dayjs from 'dayjs'
 import 'dayjs/locale/fr'
 import isoWeek from 'dayjs/plugin/isoWeek'
@@ -280,131 +185,13 @@ dayjs.locale('fr')
 const businessStore = useBusinessStore()
 const servicesStore = useServicesStore()
 const appointmentsStore = useAppointmentsStore()
+const { showNotification } = useNotifications()
 
-// Mode d'affichage du calendrier : créneaux horaires ou vue semaine
-const calendarMode = ref('hours')
-
-// Nombre de jours affichés : aujourd'hui + les 6 prochains (semaine glissante)
-const DAYS_AHEAD = 7
-
-const dayKeyMap = {
-  1: 'monday',
-  2: 'tuesday',
-  3: 'wednesday',
-  4: 'thursday',
-  5: 'friday',
-  6: 'saturday',
-  7: 'sunday'
-}
-
-function getOpeningForDate(date) {
-  const isoDay = date.isoWeekday()
-  const key = dayKeyMap[isoDay]
-  return businessStore.business?.opening_hours?.[key] || null
-}
-
-function buildHourSlotsForDate(date) {
-  const opening = getOpeningForDate(date)
-  if (!opening || !opening.open || !opening.start || !opening.end) {
-    return []
+const publicUrl = computed(() => {
+  if (businessStore.business?.slug) {
+    return `${window.location.origin}/${businessStore.business.slug}`
   }
-
-  const slots = []
-  const baseDate = date.format('YYYY-MM-DD')
-
-  let current = dayjs(`${baseDate} ${opening.start}`)
-  const end = dayjs(`${baseDate} ${opening.end}`)
-
-  let breakStart = null
-  let breakEnd = null
-  if (opening.hasBreak && opening.breakStart && opening.breakEnd) {
-    breakStart = dayjs(`${baseDate} ${opening.breakStart}`)
-    breakEnd = dayjs(`${baseDate} ${opening.breakEnd}`)
-  }
-
-  while (current.isBefore(end)) {
-    // Sauter la pause déjeuner
-    if (
-      breakStart &&
-      breakEnd &&
-      (current.isAfter(breakStart) || current.isSame(breakStart)) &&
-      current.isBefore(breakEnd)
-    ) {
-      current = breakEnd
-      continue
-    }
-
-    const slotStart = current
-    const slotEnd = current.add(1, 'hour')
-
-    const slotAppointments = appointmentsStore.appointments
-      .filter(apt => {
-        const aptStart = dayjs(apt.appointment_date)
-        const durationMinutes = apt.service_duration || 60
-        const aptEnd = aptStart.add(durationMinutes, 'minute')
-        // Chevauchement entre [aptStart, aptEnd[ et [slotStart, slotEnd[
-        return aptStart.isBefore(slotEnd) && aptEnd.isAfter(slotStart)
-      })
-      .sort(
-        (a, b) =>
-          new Date(a.appointment_date) - new Date(b.appointment_date)
-      )
-
-    slots.push({
-      time: current.format('HH:mm'),
-      appointments: slotAppointments,
-      hasAppointments: slotAppointments.length > 0
-    })
-
-    current = current.add(1, 'hour')
-  }
-
-  return slots
-}
-
-const timeGridDays = computed(() => {
-  const start = dayjs().startOf('day')
-
-  return Array.from({ length: DAYS_AHEAD }).map((_, index) => {
-    const date = start.add(index, 'day')
-    const slots = buildHourSlotsForDate(date)
-    const isToday = index === 0
-
-    return {
-      date: date.format('YYYY-MM-DD'),
-      label: isToday
-        ? `Aujourd'hui - ${date.format('dddd D/MM')}`
-        : date.format('dddd D/MM'),
-      slots
-    }
-  })
-})
-
-// Vue semaine : rendez-vous groupés par jour de la semaine en cours
-const currentWeekStart = computed(() => dayjs().startOf('isoWeek'))
-
-const weekDays = computed(() => {
-  const start = currentWeekStart.value
-
-  return Array.from({ length: 7 }).map((_, index) => {
-    const date = start.add(index, 'day')
-    const dateStr = date.format('YYYY-MM-DD')
-
-    const dayAppointments = appointmentsStore.appointments
-      .filter(apt =>
-        dayjs(apt.appointment_date).format('YYYY-MM-DD') === dateStr
-      )
-      .sort(
-        (a, b) =>
-          new Date(a.appointment_date) - new Date(b.appointment_date)
-      )
-
-    return {
-      date: dateStr,
-      label: date.format('dddd D/MM'),
-      appointments: dayAppointments
-    }
-  })
+  return ''
 })
 
 const appointmentDialog = reactive({
@@ -448,23 +235,6 @@ function resetAppointmentForm() {
   appointmentForm.duration = null
 }
 
-function openCreateDialog(day, slot) {
-  appointmentDialog.visible = true
-  appointmentDialog.isEdit = false
-  appointmentDialog.appointmentId = null
-  appointmentDialog.date = day.date
-  appointmentDialog.time = slot.time
-  resetAppointmentForm()
-
-  // Pré-remplir la durée avec celle du service sélectionné, si disponible
-  const selectedService = servicesStore.services.find(
-    s => s.id === appointmentForm.service_id
-  )
-  if (selectedService?.duration) {
-    appointmentForm.duration = selectedService.duration
-  }
-}
-
 function openEditDialog(appointment) {
   appointmentDialog.visible = true
   appointmentDialog.isEdit = true
@@ -477,14 +247,6 @@ function openEditDialog(appointment) {
   appointmentForm.customer_phone = appointment.customer_phone
   appointmentForm.service_id = appointment.service_id || null
   appointmentForm.duration = appointment.service_duration || null
-}
-
-function handleSlotClick(day, slot) {
-  if (slot.appointments.length) {
-    openEditDialog(slot.appointments[0])
-  } else {
-    openCreateDialog(day, slot)
-  }
 }
 
 async function submitAppointment() {
@@ -524,15 +286,6 @@ async function submitAppointment() {
       appointment_date: dateTime,
       ...servicePayload
     })
-  } else {
-    await appointmentsStore.createAppointment({
-      business_id: businessStore.business.id,
-      customer_name: appointmentForm.customer_name,
-      customer_email: appointmentForm.customer_email,
-      customer_phone: appointmentForm.customer_phone,
-      appointment_date: dateTime,
-      ...servicePayload
-    })
   }
 
   appointmentDialog.visible = false
@@ -566,6 +319,17 @@ function getStatusColor(status) {
 function viewAppointment(apt) {
   // Navigate to appointment details
   console.log('View appointment:', apt)
+}
+
+function copyUrl() {
+  if (publicUrl.value) {
+    navigator.clipboard.writeText(publicUrl.value)
+    showNotification({
+      message: 'URL copiée dans le presse-papiers',
+      type: 'success',
+      timeout: 2500
+    })
+  }
 }
 </script>
 

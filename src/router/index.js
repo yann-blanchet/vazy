@@ -54,9 +54,60 @@ const routes = [
         meta: { requiresAuth: true, requiresBusiness: true }
       },
       {
-        path: 'settings',
-        name: 'settings',
-        component: () => import('../views/settings/SettingsView.vue'),
+        path: 'page',
+        name: 'page',
+        component: () => import('../views/page/PageView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      }
+    ]
+  },
+  // Appointment form routes (no layout header/footer) - MUST come before /:slug catch-all
+  {
+    path: '/appointments',
+    component: () => import('../layouts/SimpleLayout.vue'),
+    children: [
+      {
+        path: 'new',
+        name: 'appointment-new',
+        component: () => import('../views/appointments/AppointmentFormView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      },
+      {
+        path: ':id/edit',
+        name: 'appointment-edit',
+        component: () => import('../views/appointments/AppointmentFormView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      }
+    ]
+  },
+  // Service form routes (no layout header/footer) - MUST come before /:slug catch-all
+  {
+    path: '/services',
+    component: () => import('../layouts/SimpleLayout.vue'),
+    children: [
+      {
+        path: 'new',
+        name: 'service-new',
+        component: () => import('../views/services/ServiceFormView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      },
+      {
+        path: ':id/edit',
+        name: 'service-edit',
+        component: () => import('../views/services/ServiceFormView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      }
+    ]
+  },
+  // Block date route (no layout header/footer)
+  {
+    path: '/availability',
+    component: () => import('../layouts/SimpleLayout.vue'),
+    children: [
+      {
+        path: 'block',
+        name: 'block-date',
+        component: () => import('../views/availability/BlockDateView.vue'),
         meta: { requiresAuth: true, requiresBusiness: true }
       }
     ]

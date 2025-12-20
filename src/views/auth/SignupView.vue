@@ -51,19 +51,53 @@ const password = ref('')
 const confirmPassword = ref('')
 
 async function handleSignup() {
-  const { error } = await authStore.signUp(email.value, password.value)
+  const { error, data } = await authStore.signUp(email.value, password.value)
 
   if (error) {
+    console.error('Signup error:', error)
     showNotification({
       type: 'error',
-      message: error.message || 'Erreur lors de la création du compte'
+      message: error.message || 'Erreur lors de la création du compte. Vérifiez vos informations.'
     })
   } else {
-    showNotification({
-      type: 'success',
-      message: 'Compte créé avec succès !'
-    })
-    router.push('/onboarding')
+    // Vérifier si l'email nécessite une confirmation
+    if (data?.user && !data.session) {
+      showNotification({
+        type: 'info',
+        message: 'Compte créé ! Veuillez vérifier votre email pour confirmer votre compte.',
+        timeout: 5000
+      })
+      router.push('/login')
+    } else {
+      // Attendre un peu pour que la session soit bien établie
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Vérifier que l'utilisateur est bien authentifié avant de rediriger
+      if (authStore.isAuthenticated) {
+        showNotification({
+          type: 'success',
+          message: 'Compte créé avec succès !'
+        })
+        router.push('/onboarding')
+      } else {
+        // Si pas authentifié, essayer de réinitialiser
+        await authStore.init()
+        if (authStore.isAuthenticated) {
+          showNotification({
+            type: 'success',
+            message: 'Compte créé avec succès !'
+          })
+          router.push('/onboarding')
+        } else {
+          showNotification({
+            type: 'warning',
+            message: 'Compte créé. Veuillez vous connecter.',
+            timeout: 5000
+          })
+          router.push('/login')
+        }
+      }
+    }
   }
 }
 </script>

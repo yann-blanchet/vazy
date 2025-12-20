@@ -9,184 +9,270 @@
       </div>
     </div>
 
-    <q-list v-if="appointmentsStore.appointments.length > 0" bordered>
-      <q-item v-for="apt in appointmentsStore.appointments" :key="apt.id" clickable @click="viewAppointment(apt)">
-        <q-item-section avatar>
-          <q-icon name="event" color="primary" />
-        </q-item-section>
-        <q-item-section>
-          <q-item-label>{{ apt.customer_name }}</q-item-label>
-          <q-item-label caption>
-            {{ apt.service_name }} - {{ formatDate(apt.appointment_date) }} à {{ formatTime(apt.appointment_date) }}
-          </q-item-label>
-        </q-item-section>
-        <q-item-section side>
-          <q-badge :color="getStatusColor(apt.status)">
-            {{ getStatusLabel(apt.status) }}
-          </q-badge>
-        </q-item-section>
-        <q-item-section side>
-          <q-btn flat icon="more_vert" @click.stop>
-            <q-menu>
-              <q-list>
-                <q-item clickable v-close-popup @click="editAppointment(apt)">
-                  <q-item-section avatar>
-                    <q-icon name="edit" />
+    <!-- Calendar View -->
+    <q-card>
+      <q-card-section>
+        <div class="row justify-center q-mb-md">
+          <div class="col-auto">
+            <q-btn-toggle
+              v-model="calendarViewMode"
+              :options="[
+                { label: 'Créneaux', value: 'hours', icon: 'schedule' },
+                { label: 'Semaine', value: 'week', icon: 'view_week' }
+              ]"
+              dense
+              unelevated
+              rounded
+              glossy
+              color="primary"
+              toggle-color="white"
+              text-color="white"
+              toggle-text-color="primary"
+              class="bg-primary text-white shadow-1"
+            />
+          </div>
+        </div>
+
+        <!-- Vue créneaux (heures sur plusieurs jours) -->
+        <div v-if="calendarViewMode === 'hours'" class="row q-col-gutter-md">
+          <!-- Colonnes par jour avec créneaux horaires -->
+          <div
+            v-for="day in timeGridDays"
+            :key="day.date"
+            class="col-12 col-md-4"
+          >
+            <div class="text-subtitle2 q-mb-xs">
+              {{ day.label }}
+            </div>
+            <div v-if="day.slots.length">
+              <q-list dense bordered class="rounded-borders">
+                <q-item
+                  v-for="slot in day.slots"
+                  :key="slot.time"
+                  :class="{ 'bg-grey-2': slot.hasAppointments }"
+                  clickable
+                  v-ripple
+                  @click="handleSlotClick(day, slot)"
+                >
+                  <q-item-section side top>
+                    <q-item-label>{{ slot.time }}</q-item-label>
                   </q-item-section>
-                  <q-item-section>Modifier</q-item-section>
-                </q-item>
-                <q-item clickable v-close-popup @click="markCompleted(apt)" v-if="apt.status === 'confirmed'">
-                  <q-item-section avatar>
-                    <q-icon name="check" />
+                  <q-item-section>
+                    <q-item-label v-if="slot.appointments.length">
+                      {{ slot.appointments[0].customer_name }}
+                    </q-item-label>
+                    <q-item-label v-if="slot.appointments.length" caption>
+                      {{ slot.appointments[0].service_name }}
+                    </q-item-label>
+                    <q-item-label v-else caption class="text-grey-6">
+                      Libre
+                    </q-item-label>
                   </q-item-section>
-                  <q-item-section>Marquer comme terminé</q-item-section>
-                </q-item>
-                <q-item clickable v-close-popup @click="markNoShow(apt)" v-if="apt.status === 'confirmed'">
-                  <q-item-section avatar>
-                    <q-icon name="cancel" />
+                  <q-item-section side v-if="slot.appointments.length">
+                    <q-badge :color="getStatusColor(slot.appointments[0].status)" />
                   </q-item-section>
-                  <q-item-section>Absent</q-item-section>
-                </q-item>
-                <q-item clickable v-close-popup @click="deleteAppointment(apt.id)">
-                  <q-item-section avatar>
-                    <q-icon name="delete" color="negative" />
-                  </q-item-section>
-                  <q-item-section>Supprimer</q-item-section>
                 </q-item>
               </q-list>
-            </q-menu>
-          </q-btn>
-        </q-item-section>
-      </q-item>
-    </q-list>
+            </div>
+            <div v-else class="text-grey-6 text-caption q-mt-sm">
+              Fermé
+            </div>
+          </div>
+        </div>
 
-    <q-card v-else class="q-pa-lg text-center">
-      <div class="text-grey-7">
-        Aucun rendez-vous pour le moment.
-      </div>
+        <!-- Vue semaine (rendez-vous groupés par jour de la semaine en cours) -->
+        <div v-else class="row q-col-gutter-md">
+          <div
+            v-for="day in weekDays"
+            :key="day.date"
+            class="col-12 col-sm-6 col-md-3"
+          >
+            <div class="text-subtitle2 q-mb-xs">
+              {{ day.label }}
+            </div>
+            <div class="text-caption text-grey q-mb-xs">
+              {{ day.appointments.length }} rendez-vous
+            </div>
+
+            <q-list v-if="day.appointments.length" dense bordered class="rounded-borders">
+              <q-item
+                v-for="apt in day.appointments"
+                :key="apt.id"
+                clickable
+                v-ripple
+                @click="editAppointment(apt)"
+              >
+                <q-item-section>
+                  <q-item-label>{{ apt.customer_name }}</q-item-label>
+                  <q-item-label caption>
+                    {{ formatTime(apt.appointment_date) }} • {{ apt.service_name }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-badge :color="getStatusColor(apt.status)" />
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <div v-else class="text-grey-6 text-caption q-mt-sm">
+              Aucun rendez-vous
+            </div>
+          </div>
+        </div>
+      </q-card-section>
     </q-card>
 
-    <!-- Appointment Dialog -->
-    <q-dialog v-model="showAppointmentDialog">
-      <q-card style="min-width: 500px; max-width: 700px">
-        <q-card-section>
-          <div class="text-h6">{{ editingAppointment ? 'Modifier' : 'Nouveau' }} rendez-vous</div>
-        </q-card-section>
-
-        <q-card-section>
-          <q-form ref="appointmentFormRef" @submit.prevent="saveAppointment" class="q-gutter-md">
-            <!-- Service Selection -->
-            <q-select v-model="appointmentForm.service_id" :options="serviceOptions" option-value="id"
-              option-label="name" emit-value map-options label="Service *" outlined
-              :rules="[val => !!val || 'Service requis']" :disable="editingAppointment !== null">
-              <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.name }}</q-item-label>
-                    <q-item-label caption>{{ formatPrice(scope.opt.price) }} - {{ scope.opt.duration }}
-                      min</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-
-            <!-- Date and Time -->
-            <div class="row q-gutter-md">
-              <div class="col">
-                <q-input v-model="appointmentForm.date" label="Date *" type="date" outlined
-                  :rules="[val => !!val || 'Date requise']" :min="minDate" />
-              </div>
-              <div class="col">
-                <q-input v-model="appointmentForm.time" label="Heure *" type="time" outlined
-                  :rules="[val => !!val || 'Heure requise']" />
-              </div>
-            </div>
-
-            <!-- Customer Information -->
-            <q-separator class="q-my-md" />
-            <div class="text-subtitle2 q-mb-sm">Informations client</div>
-
-            <q-input v-model="appointmentForm.customer_name" label="Nom complet *" outlined
-              :rules="[val => !!val || 'Nom requis']" />
-
-            <div class="row q-gutter-md">
-              <div class="col">
-                <q-input v-model="appointmentForm.customer_email" label="Email *" type="email" outlined
-                  :rules="[val => !!val || 'Email requis', val => /.+@.+\..+/.test(val) || 'Email invalide']" />
-              </div>
-              <div class="col">
-                <q-input v-model="appointmentForm.customer_phone" label="Téléphone" outlined />
-              </div>
-            </div>
-
-            <!-- Notes -->
-            <q-input v-model="appointmentForm.notes" label="Notes (optionnel)" type="textarea" outlined rows="3" />
-
-            <!-- Status (only for editing) -->
-            <q-select v-if="editingAppointment" v-model="appointmentForm.status" :options="statusOptions" label="Statut"
-              outlined />
-
-            <div class="row justify-end q-mt-lg">
-              <q-btn flat label="Annuler" @click="closeDialog" />
-              <q-btn type="submit" label="Enregistrer" color="primary" :loading="appointmentsStore.loading"
-                unelevated />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAppointmentsStore } from '../../stores/appointments'
 import { useServicesStore } from '../../stores/services'
 import { useBusinessStore } from '../../stores/business'
 import { useQuasar } from 'quasar'
 import { useNotifications } from '../../composables/useNotifications'
 import dayjs from 'dayjs'
+import 'dayjs/locale/fr'
+import isoWeek from 'dayjs/plugin/isoWeek'
 
+dayjs.extend(isoWeek)
+dayjs.locale('fr')
+
+const router = useRouter()
 const appointmentsStore = useAppointmentsStore()
 const servicesStore = useServicesStore()
 const businessStore = useBusinessStore()
 const $q = useQuasar()
 const { showNotification } = useNotifications()
 
-const showAppointmentDialog = ref(false)
-const editingAppointment = ref(null)
-const appointmentFormRef = ref(null)
+const calendarViewMode = ref('hours')
+const selectedDate = ref(dayjs().format('YYYY-MM-DD'))
 
-const appointmentForm = reactive({
-  service_id: null,
-  date: '',
-  time: '',
-  customer_name: '',
-  customer_email: '',
-  customer_phone: '',
-  notes: '',
-  status: 'confirmed'
+// Nombre de jours affichés : aujourd'hui + les 6 prochains (semaine glissante)
+const DAYS_AHEAD = 7
+
+const dayKeyMap = {
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday',
+  7: 'sunday'
+}
+
+
+// Calendar computed properties
+function getOpeningForDate(date) {
+  const isoDay = date.isoWeekday()
+  const key = dayKeyMap[isoDay]
+  return businessStore.business?.opening_hours?.[key] || null
+}
+
+function buildHourSlotsForDate(date) {
+  const opening = getOpeningForDate(date)
+  if (!opening || !opening.open || !opening.start || !opening.end) {
+    return []
+  }
+
+  const slots = []
+  const baseDate = date.format('YYYY-MM-DD')
+
+  let current = dayjs(`${baseDate} ${opening.start}`)
+  const end = dayjs(`${baseDate} ${opening.end}`)
+
+  let breakStart = null
+  let breakEnd = null
+  if (opening.hasBreak && opening.breakStart && opening.breakEnd) {
+    breakStart = dayjs(`${baseDate} ${opening.breakStart}`)
+    breakEnd = dayjs(`${baseDate} ${opening.breakEnd}`)
+  }
+
+  while (current.isBefore(end)) {
+    // Sauter la pause déjeuner
+    if (
+      breakStart &&
+      breakEnd &&
+      (current.isAfter(breakStart) || current.isSame(breakStart)) &&
+      current.isBefore(breakEnd)
+    ) {
+      current = breakEnd
+      continue
+    }
+
+    const slotStart = current
+    const slotEnd = current.add(1, 'hour')
+
+    const slotAppointments = appointmentsStore.appointments
+      .filter(apt => {
+        const aptStart = dayjs(apt.appointment_date)
+        const durationMinutes = apt.service_duration || 60
+        const aptEnd = aptStart.add(durationMinutes, 'minute')
+        // Chevauchement entre [aptStart, aptEnd[ et [slotStart, slotEnd[
+        return aptStart.isBefore(slotEnd) && aptEnd.isAfter(slotStart)
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.appointment_date) - new Date(b.appointment_date)
+      )
+
+    slots.push({
+      time: current.format('HH:mm'),
+      appointments: slotAppointments,
+      hasAppointments: slotAppointments.length > 0
+    })
+
+    current = current.add(1, 'hour')
+  }
+
+  return slots
+}
+
+const timeGridDays = computed(() => {
+  const start = dayjs().startOf('day')
+
+  return Array.from({ length: DAYS_AHEAD }).map((_, index) => {
+    const date = start.add(index, 'day')
+    const slots = buildHourSlotsForDate(date)
+    const isToday = index === 0
+
+    return {
+      date: date.format('YYYY-MM-DD'),
+      label: isToday
+        ? `Aujourd'hui - ${date.format('dddd D/MM')}`
+        : date.format('dddd D/MM'),
+      slots
+    }
+  })
 })
 
-const statusOptions = [
-  { label: 'Confirmé', value: 'confirmed' },
-  { label: 'Terminé', value: 'completed' },
-  { label: 'Annulé', value: 'cancelled' },
-  { label: 'Absent', value: 'no-show' }
-]
+// Vue semaine : rendez-vous groupés par jour de la semaine en cours
+const currentWeekStart = computed(() => dayjs().startOf('isoWeek'))
 
-const minDate = computed(() => {
-  return dayjs().format('YYYY-MM-DD')
-})
+const weekDays = computed(() => {
+  const start = currentWeekStart.value
 
-const serviceOptions = computed(() => {
-  return servicesStore.services.map(service => ({
-    id: service.id,
-    name: service.name,
-    price: service.price,
-    duration: service.duration,
-    description: service.description
-  }))
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = start.add(index, 'day')
+    const dateStr = date.format('YYYY-MM-DD')
+
+    const dayAppointments = appointmentsStore.appointments
+      .filter(apt =>
+        dayjs(apt.appointment_date).format('YYYY-MM-DD') === dateStr
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.appointment_date) - new Date(b.appointment_date)
+      )
+
+    return {
+      date: dateStr,
+      label: date.format('dddd D/MM'),
+      appointments: dayAppointments
+    }
+  })
 })
 
 onMounted(async () => {
@@ -202,11 +288,19 @@ function formatTime(date) {
   return dayjs(date).format('HH:mm')
 }
 
-function formatPrice(price) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(price)
+function handleSlotClick(day, slot) {
+  if (slot.appointments.length) {
+    editAppointment(slot.appointments[0])
+  } else {
+    // Rediriger vers la nouvelle vue avec la date et l'heure pré-remplies
+    router.push({
+      name: 'appointment-new',
+      query: {
+        date: day.date,
+        time: slot.time
+      }
+    })
+  }
 }
 
 function getStatusColor(status) {
@@ -230,163 +324,11 @@ function getStatusLabel(status) {
 }
 
 function openNewAppointmentDialog() {
-  editingAppointment.value = null
-  resetForm()
-  showAppointmentDialog.value = true
-}
-
-function viewAppointment(apt) {
-  editAppointment(apt)
+  router.push({ name: 'appointment-new' })
 }
 
 function editAppointment(apt) {
-  editingAppointment.value = apt
-
-  // Find the service to get its details
-  const service = servicesStore.services.find(s => s.id === apt.service_id)
-
-  // Format date and time from ISO string
-  const appointmentDate = dayjs(apt.appointment_date)
-
-  Object.assign(appointmentForm, {
-    service_id: apt.service_id || null,
-    date: appointmentDate.format('YYYY-MM-DD'),
-    time: appointmentDate.format('HH:mm'),
-    customer_name: apt.customer_name || '',
-    customer_email: apt.customer_email || '',
-    customer_phone: apt.customer_phone || '',
-    notes: apt.notes || '',
-    status: apt.status || 'confirmed'
-  })
-
-  showAppointmentDialog.value = true
-}
-
-function resetForm() {
-  Object.assign(appointmentForm, {
-    service_id: null,
-    date: '',
-    time: '',
-    customer_name: '',
-    customer_email: '',
-    customer_phone: '',
-    notes: '',
-    status: 'confirmed'
-  })
-}
-
-function closeDialog() {
-  showAppointmentDialog.value = false
-  editingAppointment.value = null
-  resetForm()
-  if (appointmentFormRef.value) {
-    appointmentFormRef.value.resetValidation()
-  }
-}
-
-async function saveAppointment() {
-  // Validate form
-  if (appointmentFormRef.value) {
-    const valid = await appointmentFormRef.value.validate()
-    if (!valid) {
-      return
-    }
-  }
-
-  try {
-    if (!businessStore.business) {
-      showNotification({
-        type: 'error',
-        message: 'Aucun commerce trouvé'
-      })
-      return
-    }
-
-    // Get selected service details
-    const selectedService = servicesStore.services.find(s => s.id === appointmentForm.service_id)
-    if (!selectedService) {
-      showNotification({
-        type: 'error',
-        message: 'Service introuvable'
-      })
-      return
-    }
-
-    // Combine date and time into ISO string
-    const appointmentDate = dayjs(`${appointmentForm.date} ${appointmentForm.time}`).toISOString()
-
-    if (editingAppointment.value) {
-      // Update existing appointment
-      const updates = {
-        service_id: appointmentForm.service_id,
-        appointment_date: appointmentDate,
-        customer_name: appointmentForm.customer_name,
-        customer_email: appointmentForm.customer_email,
-        customer_phone: appointmentForm.customer_phone || null,
-        notes: appointmentForm.notes || null,
-        status: appointmentForm.status,
-        service_name: selectedService.name,
-        service_price: selectedService.price,
-        service_duration: selectedService.duration
-      }
-
-      const { error } = await appointmentsStore.updateAppointment(editingAppointment.value.id, updates)
-
-      if (error) {
-        showNotification({
-          type: 'error',
-          message: error.message || 'Erreur lors de la mise à jour'
-        })
-        return
-      }
-
-      showNotification({
-        type: 'success',
-        message: 'Rendez-vous mis à jour'
-      })
-    } else {
-      // Create new appointment
-      const appointmentData = {
-        business_id: businessStore.business.id,
-        service_id: appointmentForm.service_id,
-        customer_name: appointmentForm.customer_name,
-        customer_email: appointmentForm.customer_email,
-        customer_phone: appointmentForm.customer_phone || null,
-        appointment_date: appointmentDate,
-        service_name: selectedService.name,
-        service_price: selectedService.price,
-        service_duration: selectedService.duration,
-        notes: appointmentForm.notes || null
-      }
-
-      const { data, error } = await appointmentsStore.createAppointment(appointmentData)
-
-      if (error) {
-        showNotification({
-          type: 'error',
-          message: error.message || 'Erreur lors de la création'
-        })
-        return
-      }
-
-      showNotification({
-        type: 'success',
-        message: 'Rendez-vous créé avec succès'
-      })
-    }
-
-    // Reload appointments
-    await appointmentsStore.loadAppointments()
-
-    // Close dialog
-    closeDialog()
-  } catch (error) {
-    console.error('Save appointment error:', error)
-    showNotification({
-      type: 'error',
-      message: 'Une erreur est survenue'
-    })
-  }
+  router.push({ name: 'appointment-edit', params: { id: apt.id } })
 }
 
 async function markCompleted(apt) {

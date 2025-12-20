@@ -67,16 +67,6 @@
       </q-card-section>
     </q-card>
 
-    <q-card>
-      <q-card-section>
-        <div class="text-h6 q-mb-md">URL publique</div>
-        <q-input :model-value="publicUrl" readonly outlined>
-          <template v-slot:append>
-            <q-btn icon="content_copy" flat @click="copyUrl" />
-          </template>
-        </q-input>
-      </q-card-section>
-    </q-card>
   </q-page>
 </template>
 
@@ -115,12 +105,6 @@ const days = [
   { label: 'Dimanche', value: 'sunday' }
 ]
 
-const publicUrl = computed(() => {
-  if (businessStore.business?.slug) {
-    return `${window.location.origin}/${businessStore.business.slug}`
-  }
-  return ''
-})
 
 onMounted(() => {
   if (businessStore.business) {
@@ -216,15 +200,6 @@ async function updateHours() {
   }
 }
 
-function copyUrl() {
-  navigator.clipboard.writeText(publicUrl.value)
-  showNotification({
-    message: 'URL copiée dans le presse-papiers',
-    type: 'info',
-    icon: 'content_copy',
-    timeout: 2500
-  })
-}
 </script>
 
 <style scoped>

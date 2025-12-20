@@ -49,8 +49,26 @@ export const useBusinessStore = defineStore('business', () => {
   async function createBusiness(businessData) {
     loading.value = true
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
+      // Vérifier l'authentification avec plusieurs méthodes
+      let user = null
+      
+      // Essayer d'abord avec getSession (plus rapide)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        user = session.user
+      } else {
+        // Si pas de session, essayer getUser
+        const { data: { user: userData }, error: userError } = await supabase.auth.getUser()
+        if (userError) {
+          console.error('Get user error:', userError)
+          throw new Error('Vous devez être connecté pour créer un commerce. Veuillez vous connecter.')
+        }
+        user = userData
+      }
+      
+      if (!user) {
+        throw new Error('Vous devez être connecté pour créer un commerce. Veuillez vous connecter.')
+      }
 
       // Generate ID if not provided
       const businessId = businessData.id || crypto.randomUUID()

@@ -23,16 +23,67 @@
     </q-page-container>
 
     <q-footer v-if="authStore.isAuthenticated" elevated class="bg-white text-primary">
-      <q-tabs v-model="activeTab" class="text-grey-7" active-color="primary" indicator-color="primary" align="justify"
-        narrow-indicator dense>
-        <q-route-tab to="/dashboard" name="dashboard" icon="dashboard"
-          :label="$q.screen.gt.xs ? 'Tableau de bord' : ''" />
-        <q-route-tab to="/services" name="services" icon="content_cut" :label="$q.screen.gt.xs ? 'Services' : ''" />
-        <q-route-tab to="/appointments" name="appointments" icon="event"
-          :label="$q.screen.gt.xs ? 'Rendez-vous' : ''" />
-        <q-route-tab to="/settings" name="settings" icon="settings" :label="$q.screen.gt.xs ? 'Paramètres' : ''" />
-      </q-tabs>
+      <div class="row items-center justify-center relative-position" style="height: 56px;">
+        <q-tabs v-model="activeTab" class="text-grey-7 absolute-full" active-color="primary" indicator-color="primary"
+          align="justify" narrow-indicator dense>
+          <q-route-tab to="/dashboard" name="dashboard" icon="dashboard"
+            :label="$q.screen.gt.xs ? 'Tableau de bord' : ''" />
+          <q-route-tab to="/appointments" name="appointments" icon="event"
+            :label="$q.screen.gt.xs ? 'Rendez-vous' : ''" />
+            <q-route-tab to="/services" name="services" icon="content_cut" :label="$q.screen.gt.xs ? 'Services' : ''" />
+            <q-route-tab to="/page" name="page" icon="public" :label="$q.screen.gt.xs ? 'Page' : ''" />
+        </q-tabs>
+        <q-btn fab icon="add" color="primary" class="absolute-center" @click="showQuickActionModal = true"
+          style="z-index: 1;" />
+      </div>
     </q-footer>
+
+    <!-- Quick Action Modal -->
+    <q-dialog v-model="showQuickActionModal">
+      <q-card style="width: 90vw; max-width: 400px; min-width: 300px;">
+        <q-card-section>
+          <div class="text-h6">Actions rapides</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-list>
+            <q-item clickable v-ripple @click="goToNewAppointment">
+              <q-item-section avatar>
+                <q-icon name="event" color="primary" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Nouveau rendez-vous</q-item-label>
+                <q-item-label caption>Créer un nouveau rendez-vous</q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple @click="goToNewService">
+              <q-item-section avatar>
+                <q-icon name="content_cut" color="primary" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Nouveau service</q-item-label>
+                <q-item-label caption>Ajouter un nouveau service</q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple @click="goToBlockDate">
+              <q-item-section avatar>
+                <q-icon name="block" color="primary" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Bloquer une date</q-item-label>
+                <q-item-label caption>Rendre une date indisponible</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Fermer" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
@@ -50,6 +101,7 @@ const businessStore = useBusinessStore()
 const { showNotification } = useNotifications()
 
 const businessName = computed(() => businessStore.business?.business_name || 'Vazy')
+const showQuickActionModal = ref(false)
 
 // Determine active tab based on current route
 const activeTab = computed(() => {
@@ -57,7 +109,7 @@ const activeTab = computed(() => {
   if (routeName === 'dashboard') return 'dashboard'
   if (routeName === 'services') return 'services'
   if (routeName === 'appointments') return 'appointments'
-  if (routeName === 'settings') return 'settings'
+  if (routeName === 'page') return 'page'
   return 'dashboard'
 })
 
@@ -75,5 +127,20 @@ async function handleLogout() {
       message: 'Erreur lors de la déconnexion'
     })
   }
+}
+
+function goToNewAppointment() {
+  showQuickActionModal.value = false
+  router.push('/appointments/new')
+}
+
+function goToNewService() {
+  showQuickActionModal.value = false
+  router.push('/services/new')
+}
+
+function goToBlockDate() {
+  showQuickActionModal.value = false
+  router.push('/availability/block')
 }
 </script>

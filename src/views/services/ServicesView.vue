@@ -4,10 +4,8 @@
       <div class="col">
         <div class="text-h5">Services</div>
       </div>
-      <div class="col-auto q-gutter-sm">
-        <q-btn label="Gérer les catégories" color="secondary" icon="category" @click="showCategoryDialog = true"
-          outline />
-        <q-btn label="Ajouter un service" color="primary" icon="add" @click="showServiceDialog = true" unelevated />
+      <div class="col-auto">
+        <q-btn label="Ajouter un service" color="primary" icon="add" @click="openNewServiceDialog" unelevated />
       </div>
     </div>
 
@@ -51,110 +49,19 @@
       </div>
     </q-card>
 
-    <!-- Service Dialog -->
-    <q-dialog v-model="showServiceDialog">
-      <q-card style="min-width: 400px">
-        <q-card-section>
-          <div class="text-h6">{{ editingService ? 'Modifier' : 'Nouveau' }} service</div>
-        </q-card-section>
 
-        <q-card-section>
-          <q-form ref="serviceFormRef" @submit.prevent="saveService" class="q-gutter-md">
-            <q-input v-model="serviceForm.name" label="Nom du service *" :rules="[val => !!val || 'Requis']" outlined />
-
-            <q-input v-model="serviceForm.description" label="Description" type="textarea" outlined />
-
-            <div class="row q-gutter-md">
-              <q-input v-model.number="serviceForm.duration" label="Durée (minutes) *" type="number"
-                :rules="[val => !!val && val > 0 || 'Requis']" outlined class="col" />
-
-              <q-input v-model.number="serviceForm.price" label="Prix (€) *" type="number" step="0.01"
-                :rules="[val => !!val && val >= 0 || 'Requis']" outlined class="col" />
-            </div>
-
-            <q-select v-model="serviceForm.category_id" :options="categoryOptions" option-value="id" option-label="name"
-              emit-value map-options label="Catégorie" outlined clearable hint="Sélectionnez une catégorie">
-              <template v-slot:no-option>
-                <q-item>
-                  <q-item-section class="text-grey">
-                    Aucune catégorie disponible. Créez-en une d'abord.
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-
-            <q-toggle v-model="serviceForm.visible" label="Visible sur la page publique" />
-
-            <div class="row justify-end q-mt-lg">
-              <q-btn flat label="Annuler" @click="closeDialog" />
-              <q-btn type="submit" label="Enregistrer" color="primary" :loading="servicesStore.loading" unelevated />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
-    <!-- Category Management Dialog -->
-    <q-dialog v-model="showCategoryDialog">
-      <q-card style="min-width: 500px">
-        <q-card-section>
-          <div class="text-h6">Gérer les catégories</div>
-        </q-card-section>
-
-        <q-card-section>
-          <q-list bordered separator>
-            <q-item v-for="category in categoriesStore.categories" :key="category.id">
-              <q-item-section>
-                <q-item-label>{{ category.name }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-btn flat dense icon="edit" @click="editCategory(category)" />
-                <q-btn flat dense icon="delete" color="negative" @click="deleteCategory(category.id)" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <div class="q-mt-md">
-            <q-btn label="Ajouter une catégorie" color="primary" icon="add" @click="showNewCategoryDialog = true" />
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat label="Fermer" color="primary" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- New/Edit Category Dialog -->
-    <q-dialog v-model="showNewCategoryDialog">
-      <q-card style="min-width: 300px">
-        <q-card-section>
-          <div class="text-h6">{{ editingCategory ? 'Modifier' : 'Nouvelle' }} catégorie</div>
-        </q-card-section>
-
-        <q-card-section>
-          <q-form ref="categoryFormRef" @submit.prevent="saveCategory" class="q-gutter-md">
-            <q-input v-model="categoryForm.name" label="Nom de la catégorie *" :rules="[val => !!val || 'Requis']"
-              outlined />
-
-            <div class="row justify-end q-mt-lg">
-              <q-btn flat label="Annuler" @click="closeCategoryDialog" />
-              <q-btn type="submit" label="Enregistrer" color="primary" :loading="categoriesStore.loading" unelevated />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useServicesStore } from '../../stores/services'
 import { useCategoriesStore } from '../../stores/categories'
 import { useQuasar } from 'quasar'
 import { useNotifications } from '../../composables/useNotifications'
 
+const router = useRouter()
 const servicesStore = useServicesStore()
 const categoriesStore = useCategoriesStore()
 const $q = useQuasar()
@@ -169,26 +76,6 @@ function notify(options) {
   })
 }
 
-const showServiceDialog = ref(false)
-const showCategoryDialog = ref(false)
-const showNewCategoryDialog = ref(false)
-const editingService = ref(null)
-const editingCategory = ref(null)
-const serviceFormRef = ref(null)
-const categoryFormRef = ref(null)
-
-const serviceForm = reactive({
-  name: '',
-  description: '',
-  duration: 30,
-  price: 0,
-  visible: true,
-  category_id: null
-})
-
-const categoryForm = reactive({
-  name: ''
-})
 
 // Group services by category using category_id
 const groupedServices = computed(() => {
@@ -242,14 +129,6 @@ const groupedServices = computed(() => {
   return result
 })
 
-// Category options for service select
-const categoryOptions = computed(() => {
-  return categoriesStore.categories.map(cat => ({
-    id: cat.id,
-    name: cat.name
-  }))
-})
-
 onMounted(async () => {
   await Promise.all([
     categoriesStore.loadCategories(),
@@ -264,90 +143,12 @@ function formatPrice(price) {
   }).format(price)
 }
 
+function openNewServiceDialog() {
+  router.push({ name: 'service-new' })
+}
+
 function editService(service) {
-  editingService.value = service
-  Object.assign(serviceForm, {
-    name: service.name,
-    description: service.description || '',
-    duration: service.duration,
-    price: service.price,
-    visible: service.visible,
-    category_id: service.category_id || null
-  })
-  showServiceDialog.value = true
-}
-
-function closeDialog() {
-  showServiceDialog.value = false
-  editingService.value = null
-  Object.assign(serviceForm, {
-    name: '',
-    description: '',
-    duration: 30,
-    price: 0,
-    visible: true,
-    category_id: null
-  })
-}
-
-async function saveService() {
-  // Validate form first
-  if (serviceFormRef.value) {
-    const valid = await serviceFormRef.value.validate()
-    if (!valid) {
-      return
-    }
-  }
-
-  try {
-    const serviceData = {
-      name: serviceForm.name,
-      description: serviceForm.description,
-      duration: serviceForm.duration,
-      price: serviceForm.price,
-      visible: serviceForm.visible,
-      category_id: serviceForm.category_id || null
-    }
-
-    if (editingService.value) {
-      const { error } = await servicesStore.updateService(
-        editingService.value.id,
-        serviceData
-      )
-      if (error) {
-        notify({
-          type: 'negative',
-          message: error.message || 'Erreur lors de la mise à jour'
-        })
-        return
-      }
-      notify({
-        type: 'positive',
-        message: 'Service mis à jour'
-      })
-    } else {
-      const result = await servicesStore.createService(serviceData)
-      if (result.error) {
-        notify({
-          type: 'negative',
-          message: result.error.message || 'Erreur lors de la création'
-        })
-        return
-      }
-      notify({
-        type: 'positive',
-        message: 'Service créé'
-      })
-    }
-    // Close dialog after successful save
-    closeDialog()
-  } catch (error) {
-    console.error('Save service error:', error)
-    notify({
-      type: 'negative',
-      message: 'Une erreur est survenue'
-    })
-  }
+  router.push({ name: 'service-edit', params: { id: service.id } })
 }
 
 async function toggleVisibility(service) {
@@ -389,66 +190,41 @@ async function performDelete(serviceId) {
 }
 
 // Category management functions
-function editCategory(category) {
-  editingCategory.value = category
-  categoryForm.name = category.name
-  showNewCategoryDialog.value = true
-}
-
-function closeCategoryDialog() {
-  showNewCategoryDialog.value = false
-  editingCategory.value = null
-  categoryForm.name = ''
-}
-
-async function saveCategory() {
-  if (categoryFormRef.value) {
-    const valid = await categoryFormRef.value.validate()
-    if (!valid) {
+async function editCategory(category) {
+  $q.dialog({
+    title: 'Modifier la catégorie',
+    message: 'Entrez le nouveau nom de la catégorie',
+    prompt: {
+      model: category.name,
+      type: 'text'
+    },
+    cancel: true,
+    persistent: true
+  }).onOk(async (newName) => {
+    if (!newName || newName.trim() === '') {
+      notify({
+        type: 'negative',
+        message: 'Le nom de la catégorie ne peut pas être vide'
+      })
       return
     }
-  }
 
-  try {
-    if (editingCategory.value) {
-      const { error } = await categoriesStore.updateCategory(editingCategory.value.id, {
-        name: categoryForm.name
+    const { error } = await categoriesStore.updateCategory(category.id, {
+      name: newName.trim()
+    })
+
+    if (error) {
+      notify({
+        type: 'negative',
+        message: error.message || 'Erreur lors de la mise à jour'
       })
-      if (error) {
-        notify({
-          type: 'negative',
-          message: error.message || 'Erreur lors de la mise à jour'
-        })
-        return
-      }
+    } else {
       notify({
         type: 'positive',
         message: 'Catégorie mise à jour'
       })
-    } else {
-      const result = await categoriesStore.createCategory({
-        name: categoryForm.name
-      })
-      if (result.error) {
-        notify({
-          type: 'negative',
-          message: result.error.message || 'Erreur lors de la création'
-        })
-        return
-      }
-      notify({
-        type: 'positive',
-        message: 'Catégorie créée'
-      })
     }
-    closeCategoryDialog()
-  } catch (error) {
-    console.error('Save category error:', error)
-    notify({
-      type: 'negative',
-      message: 'Une erreur est survenue'
-    })
-  }
+  })
 }
 
 async function deleteCategory(categoryId) {
