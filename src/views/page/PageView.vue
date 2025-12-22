@@ -1,38 +1,48 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="text-h5 q-mb-md">Page publique</div>
+    <div class="text-h6 q-mb-md">Page publique</div>
 
-    <q-tabs v-model="activeTab" class="q-mb-md" active-color="primary" indicator-color="primary">
-      <q-tab name="page" label="Page" icon="public" />
-      <q-tab name="settings" label="Paramètres" icon="settings" />
+    <q-tabs 
+      v-model="activeTab" 
+      class="q-mb-md" 
+      active-color="primary" 
+      indicator-color="primary"
+      dense
+    >
+      <q-tab name="page" label="Page" />
+      <q-tab name="settings" label="Paramètres" />
     </q-tabs>
 
     <q-tab-panels v-model="activeTab" animated>
       <!-- Page Tab -->
       <q-tab-panel name="page">
-        <div class="q-gutter-md">
+        <div class="q-gutter-sm">
           <!-- Lien de la page -->
-          <q-card>
-            <q-card-section>
-              <div class="text-h6 q-mb-md">Lien de la page</div>
-              <div class="row items-center q-mt-md">
+          <q-card flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="text-subtitle2 text-grey-7 q-mb-xs">URL publique</div>
+              <div class="row items-center">
                 <div class="col">
-                  <div class="text-body2 text-grey-7">URL complète :</div>
-                  <div class="text-body1 text-weight-medium">{{ publicUrl || 'Non configuré' }}</div>
+                  <div class="text-body2 text-weight-medium">{{ publicUrl || 'Non configuré' }}</div>
                 </div>
-                <div class="col-auto q-gutter-sm">
+                <div class="col-auto q-gutter-xs">
                   <q-btn
                     icon="edit"
                     flat
+                    dense
+                    round
+                    size="sm"
                     @click="showEditUrlModal = true"
-                    label="Éditer"
                     color="primary"
                   />
                   <q-btn
                     icon="content_copy"
                     flat
+                    dense
+                    round
+                    size="sm"
                     @click="copyUrl"
-                    label="Copier"
+                    color="primary"
                     :disable="!publicUrl"
                   />
                 </div>
@@ -41,20 +51,12 @@
           </q-card>
 
           <!-- Activer / Désactiver la page -->
-          <q-card>
-            <q-card-section>
-              <div class="text-h6 q-mb-md">Activer / Désactiver la page</div>
-              <div class="row items-center q-gutter-md">
+          <q-card flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="row items-center">
                 <div class="col">
-                  <div class="text-body1">
+                  <div class="text-body2 text-weight-medium">
                     {{ pageForm.is_public_enabled ? 'Page publique activée' : 'Page publique désactivée' }}
-                  </div>
-                  <div class="text-caption text-grey-7">
-                    {{
-                      pageForm.is_public_enabled
-                        ? 'Votre page est visible par tous'
-                        : 'Votre page n\'est pas accessible publiquement'
-                    }}
                   </div>
                 </div>
                 <div class="col-auto">
@@ -70,222 +72,213 @@
           </q-card>
 
           <!-- Ouvrir la page -->
-          <q-card>
-            <q-card-section>
-              <q-btn
-                :label="businessStore.business && pageForm.is_public_enabled ? 'Ouvrir la page' : 'Page désactivée'"
-                :disable="!businessStore.business || !pageForm.is_public_enabled"
-                color="primary"
-                icon="open_in_new"
-                @click="openPublicPage"
-                unelevated
-                class="full-width"
-              />
-            </q-card-section>
-          </q-card>
+          <q-btn
+            :label="businessStore.business && pageForm.is_public_enabled ? 'Ouvrir la page' : 'Page désactivée'"
+            :disable="!businessStore.business || !pageForm.is_public_enabled"
+            color="primary"
+            icon="open_in_new"
+            @click="openPublicPage"
+            flat
+            class="full-width"
+            dense
+          />
         </div>
       </q-tab-panel>
 
       <!-- Paramètres Tab -->
       <q-tab-panel name="settings">
-        <q-card>
-          <q-card-section>
-            <div class="q-gutter-md">
-              <!-- Nom affiché -->
-              <div>
-                <div class="text-subtitle2 q-mb-sm">Nom affiché</div>
-                <q-card flat bordered>
-                  <q-card-section class="q-pa-md">
-                    <div class="row items-center">
-                      <div class="col">
-                        <div class="text-body1 text-weight-medium">
-                          {{ pageForm.business_name || 'Non défini' }}
-                        </div>
-                      </div>
-                      <div class="col-auto">
-                        <q-btn
-                          icon="edit"
-                          flat
-                          dense
-                          round
-                          color="primary"
-                          @click="openEditNameSheet"
-                        />
-                      </div>
-                    </div>
-                  </q-card-section>
-                </q-card>
-              </div>
-
-              <!-- Description -->
-              <div>
-                <div class="text-subtitle2 q-mb-sm">Description</div>
-                <q-card flat bordered>
-                  <q-card-section class="q-pa-md">
-                    <div class="row items-start">
-                      <div class="col">
-                        <div class="text-body2">
-                          {{ pageForm.description || 'Aucune description' }}
-                        </div>
-                      </div>
-                      <div class="col-auto">
-                        <q-btn
-                          icon="edit"
-                          flat
-                          dense
-                          round
-                          color="primary"
-                          @click="openEditDescriptionSheet"
-                        />
-                      </div>
-                    </div>
-                  </q-card-section>
-                </q-card>
-              </div>
-
-              <!-- Photos (max 4, première = couverture) -->
-              <div>
-                <div class="text-subtitle2 q-mb-sm">
-                  Photos (maximum 4)
-                  <q-badge v-if="businessPhotos.length > 0" color="primary" class="q-ml-sm">
-                    {{ businessPhotos.length }}/4
-                  </q-badge>
-                </div>
-                <div class="text-caption text-grey-7 q-mb-md">
-                  La première photo devient automatiquement la photo de couverture
-                </div>
-
-                <!-- Liste des photos existantes -->
-                <div v-if="businessPhotos.length > 0" class="q-mb-md">
-                  <div class="row q-gutter-sm">
-                    <div
-                      v-for="(photo, index) in businessPhotos"
-                      :key="photo.id"
-                      class="col-12 col-sm-6 col-md-3"
-                    >
-                      <q-card class="photo-card">
-                        <q-img
-                          :src="photo.photo_url"
-                          :alt="`Photo ${index + 1}`"
-                          style="height: 150px"
-                          @error="handleImageError"
-                        >
-                          <div class="absolute-top-right q-pa-xs">
-                            <q-badge
-                              v-if="index === 0"
-                              color="primary"
-                              label="Couverture"
-                            />
-                          </div>
-                          <div class="absolute-bottom-right q-pa-xs">
-                            <q-btn
-                              icon="delete"
-                              size="sm"
-                              round
-                              dense
-                              color="negative"
-                              @click="removePhoto(photo.id)"
-                              :disable="uploadingPhotos"
-                            />
-                          </div>
-                        </q-img>
-                        <q-card-section class="q-pa-sm">
-                          <div class="row q-gutter-xs justify-center">
-                            <q-btn
-                              v-if="index > 0"
-                              icon="arrow_upward"
-                              size="xs"
-                              flat
-                              dense
-                              @click="movePhotoUp(index)"
-                              :disable="uploadingPhotos"
-                            />
-                            <q-btn
-                              v-if="index < businessPhotos.length - 1"
-                              icon="arrow_downward"
-                              size="xs"
-                              flat
-                              dense
-                              @click="movePhotoDown(index)"
-                              :disable="uploadingPhotos"
-                            />
-                          </div>
-                        </q-card-section>
-                      </q-card>
-                    </div>
+        <div class="q-gutter-sm">
+          <!-- Nom affiché -->
+          <q-card flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="row items-center">
+                <div class="col">
+                  <div class="text-subtitle2 text-grey-7 q-mb-xs">Nom affiché</div>
+                  <div class="text-body2 text-weight-medium">
+                    {{ pageForm.business_name || 'Non défini' }}
                   </div>
                 </div>
+                <div class="col-auto">
+                  <q-btn
+                    icon="edit"
+                    flat
+                    dense
+                    round
+                    size="sm"
+                    color="primary"
+                    @click="openEditNameSheet"
+                  />
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
 
-                <!-- Upload de nouvelle photo -->
-                <div v-if="businessPhotos.length < 4">
-                  <q-file
-                    v-model="photoFile"
-                    label="Ajouter une photo"
-                    accept="image/*"
-                    outlined
-                    @update:model-value="handlePhotoFileSelect"
-                    :loading="uploadingPhotos"
-                    :disable="uploadingPhotos || businessPhotos.length >= 4"
+          <!-- Description -->
+          <q-card flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="row items-start">
+                <div class="col">
+                  <div class="text-subtitle2 text-grey-7 q-mb-xs">Description</div>
+                  <div class="text-body2">
+                    {{ pageForm.description || 'Aucune description' }}
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-btn
+                    icon="edit"
+                    flat
+                    dense
+                    round
+                    size="sm"
+                    color="primary"
+                    @click="openEditDescriptionSheet"
+                  />
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+
+          <!-- Photos (max 4, première = couverture) -->
+          <q-card flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="text-subtitle2 text-grey-7 q-mb-sm">
+                Photos
+                <q-badge v-if="businessPhotos.length > 0" color="primary" class="q-ml-xs" rounded>
+                  {{ businessPhotos.length }}/4
+                </q-badge>
+              </div>
+
+              <!-- Liste des photos existantes -->
+              <div v-if="businessPhotos.length > 0" class="q-mb-sm">
+                <div class="row q-gutter-xs">
+                  <div
+                    v-for="(photo, index) in businessPhotos"
+                    :key="photo.id"
+                    class="col-6 col-sm-3"
                   >
-                    <template v-slot:prepend>
-                      <q-icon name="attach_file" />
-                    </template>
-                  </q-file>
-                  <div v-if="uploadingPhotos" class="q-mt-sm">
-                    <q-linear-progress :value="photoProgress / 100" color="primary" />
-                    <div class="text-caption text-grey-7 q-mt-xs">Téléchargement en cours...</div>
+                    <div class="relative-position">
+                      <q-img
+                        :src="photo.photo_url"
+                        :alt="`Photo ${index + 1}`"
+                        style="height: 120px"
+                        @error="handleImageError"
+                        class="rounded-borders"
+                      >
+                        <div class="absolute-top-right q-pa-xs">
+                          <q-badge
+                            v-if="index === 0"
+                            color="primary"
+                            label="1"
+                            rounded
+                            dense
+                          />
+                        </div>
+                        <div class="absolute-bottom-right q-pa-xs">
+                          <q-btn
+                            icon="close"
+                            size="xs"
+                            round
+                            dense
+                            color="white"
+                            text-color="negative"
+                            @click="removePhoto(photo.id)"
+                            :disable="uploadingPhotos"
+                          />
+                        </div>
+                      </q-img>
+                      <div class="row q-gutter-xs justify-center q-mt-xs">
+                        <q-btn
+                          v-if="index > 0"
+                          icon="keyboard_arrow_up"
+                          size="xs"
+                          flat
+                          dense
+                          round
+                          @click="movePhotoUp(index)"
+                          :disable="uploadingPhotos"
+                        />
+                        <q-btn
+                          v-if="index < businessPhotos.length - 1"
+                          icon="keyboard_arrow_down"
+                          size="xs"
+                          flat
+                          dense
+                          round
+                          @click="movePhotoDown(index)"
+                          :disable="uploadingPhotos"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div v-else class="text-caption text-grey-7">
-                  Maximum de 4 photos atteint. Supprimez une photo pour en ajouter une nouvelle.
                 </div>
               </div>
 
-            </div>
-          </q-card-section>
-        </q-card>
+              <!-- Upload de nouvelle photo -->
+              <div v-if="businessPhotos.length < 4">
+                <q-file
+                  v-model="photoFile"
+                  label="Ajouter une photo"
+                  accept="image/*"
+                  outlined
+                  dense
+                  @update:model-value="handlePhotoFileSelect"
+                  :loading="uploadingPhotos"
+                  :disable="uploadingPhotos || businessPhotos.length >= 4"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="add" />
+                  </template>
+                </q-file>
+                <div v-if="uploadingPhotos" class="q-mt-xs">
+                  <q-linear-progress :value="photoProgress / 100" color="primary" />
+                </div>
+              </div>
+              <div v-else class="text-caption text-grey-7 q-mt-xs">
+                Maximum atteint
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </q-tab-panel>
     </q-tab-panels>
 
     <!-- Modal pour éditer l'URL -->
     <q-dialog v-model="showEditUrlModal">
       <q-card style="min-width: 400px">
-        <q-card-section>
-          <div class="text-h6">Modifier l'URL publique</div>
+        <q-card-section class="q-pb-sm">
+          <div class="text-h6">Modifier l'URL</div>
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit="handleUpdateSlug" class="q-gutter-md">
+          <q-form @submit="handleUpdateSlug" class="q-gutter-sm">
             <q-input
               v-model="slugForm.slug"
               label="URL publique *"
               outlined
+              dense
               :rules="[
                 val => !!val || 'Requis',
                 val => /^[a-z0-9-]+$/.test(val) || 'Seulement lettres minuscules, chiffres et tirets'
               ]"
-              hint="Partie de l'URL après le domaine (ex: mon-commerce)"
             >
               <template v-slot:prepend>
                 <div class="text-grey-7">{{ baseUrl }}/</div>
               </template>
             </q-input>
 
-            <div class="row items-center q-mt-md">
-              <div class="col">
-                <div class="text-body2 text-grey-7">Lien complet :</div>
-                <div class="text-body1 text-weight-medium">{{ baseUrl }}/{{ slugForm.slug || '...' }}</div>
-              </div>
+            <div class="text-body2 text-grey-7 q-mt-sm">
+              {{ baseUrl }}/{{ slugForm.slug || '...' }}
             </div>
 
-            <q-card-actions align="right" class="q-mt-md">
-              <q-btn flat label="Annuler" color="grey" v-close-popup />
+            <q-card-actions align="right" class="q-mt-md q-pa-none">
+              <q-btn flat label="Annuler" color="grey" v-close-popup dense />
               <q-btn
                 type="submit"
                 label="Enregistrer"
                 color="primary"
                 :loading="businessStore.loading"
-                unelevated
+                flat
+                dense
               />
             </q-card-actions>
           </q-form>
@@ -296,30 +289,32 @@
     <!-- Bottom Sheet pour éditer le nom -->
     <q-dialog v-model="showEditNameSheet" position="bottom">
       <q-card class="bottom-sheet-card">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Modifier le nom affiché</div>
+        <q-card-section class="row items-center q-pb-sm border-bottom">
+          <div class="text-subtitle1">Nom affiché</div>
           <q-space />
-          <q-btn icon="close" flat round dense @click="showEditNameSheet = false" />
+          <q-btn icon="close" flat round dense size="sm" @click="showEditNameSheet = false" />
         </q-card-section>
 
-        <q-card-section>
-          <q-form @submit.prevent="saveName" class="q-gutter-md">
+        <q-card-section class="q-pt-md">
+          <q-form @submit.prevent="saveName" class="q-gutter-sm">
             <q-input
               v-model="editNameForm.business_name"
               label="Nom affiché *"
               outlined
+              dense
               :rules="[val => !!val || 'Requis']"
               autofocus
             />
 
-            <q-card-actions align="right" class="q-mt-md">
-              <q-btn flat label="Annuler" color="grey" @click="showEditNameSheet = false" />
+            <q-card-actions align="right" class="q-mt-md q-pa-none">
+              <q-btn flat label="Annuler" color="grey" @click="showEditNameSheet = false" dense />
               <q-btn
                 type="submit"
                 label="Enregistrer"
                 color="primary"
                 :loading="businessStore.loading"
                 unelevated
+                dense
               />
             </q-card-actions>
           </q-form>
@@ -330,31 +325,33 @@
     <!-- Bottom Sheet pour éditer la description -->
     <q-dialog v-model="showEditDescriptionSheet" position="bottom">
       <q-card class="bottom-sheet-card">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Modifier la description</div>
+        <q-card-section class="row items-center q-pb-sm border-bottom">
+          <div class="text-subtitle1">Description</div>
           <q-space />
-          <q-btn icon="close" flat round dense @click="showEditDescriptionSheet = false" />
+          <q-btn icon="close" flat round dense size="sm" @click="showEditDescriptionSheet = false" />
         </q-card-section>
 
-        <q-card-section>
-          <q-form @submit.prevent="saveDescription" class="q-gutter-md">
+        <q-card-section class="q-pt-md">
+          <q-form @submit.prevent="saveDescription" class="q-gutter-sm">
             <q-input
               v-model="editDescriptionForm.description"
               label="Description"
               type="textarea"
               outlined
-              rows="6"
+              dense
+              rows="4"
               autofocus
             />
 
-            <q-card-actions align="right" class="q-mt-md">
-              <q-btn flat label="Annuler" color="grey" @click="showEditDescriptionSheet = false" />
+            <q-card-actions align="right" class="q-mt-md q-pa-none">
+              <q-btn flat label="Annuler" color="grey" @click="showEditDescriptionSheet = false" dense />
               <q-btn
                 type="submit"
                 label="Enregistrer"
                 color="primary"
                 :loading="businessStore.loading"
                 unelevated
+                dense
               />
             </q-card-actions>
           </q-form>
@@ -810,13 +807,13 @@ async function movePhotoDown(index) {
 </script>
 
 <style scoped>
-.photo-card {
-  position: relative;
-}
-
 .bottom-sheet-card {
   width: 100%;
   max-width: 100vw;
   border-radius: 16px 16px 0 0;
+}
+
+.border-bottom {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 </style>

@@ -1,35 +1,35 @@
 <template>
   <q-page class="flex flex-center bg-grey-1">
-    <q-card class="q-pa-md" style="min-width: 400px">
-      <q-card-section>
-        <div class="text-h5 text-center q-mb-md">Créer un compte</div>
+    <q-card flat bordered class="q-pa-md" style="min-width: 360px">
+      <q-card-section class="q-pb-sm">
+        <div class="text-h6 text-center">Créer un compte</div>
       </q-card-section>
 
       <q-card-section>
-        <q-form @submit="handleSignup" class="q-gutter-md">
-          <q-input v-model="email" label="Email" type="email" :rules="[val => !!val || 'Email requis']" outlined />
+        <q-form @submit="handleSignup" class="q-gutter-sm">
+          <q-input v-model="email" label="Email" type="email" :rules="[val => !!val || 'Email requis']" outlined dense />
 
           <q-input v-model="password" label="Mot de passe" type="password" :rules="[
             val => !!val || 'Mot de passe requis',
             val => val.length >= 6 || 'Minimum 6 caractères'
-          ]" outlined />
+          ]" outlined dense />
 
           <q-input v-model="confirmPassword" label="Confirmer le mot de passe" type="password" :rules="[
             val => !!val || 'Confirmation requise',
             val => val === password || 'Les mots de passe ne correspondent pas'
-          ]" outlined />
+          ]" outlined dense />
 
-          <div class="text-center">
-            <q-btn type="submit" label="Créer un compte" color="primary" :loading="authStore.loading" unelevated
-              class="full-width" />
+          <div class="text-center q-mt-md">
+            <q-btn type="submit" label="Créer un compte" color="primary" :loading="authStore.loading" flat
+              class="full-width" dense />
           </div>
         </q-form>
       </q-card-section>
 
-      <q-card-section class="text-center">
-        <div>
+      <q-card-section class="text-center q-pt-sm">
+        <div class="text-body2 text-grey-7">
           Déjà un compte ?
-          <router-link to="/login">Se connecter</router-link>
+          <router-link to="/login" class="text-primary">Se connecter</router-link>
         </div>
       </q-card-section>
     </q-card>

@@ -11,10 +11,10 @@
         <q-space />
 
         <template v-if="authStore.isAuthenticated">
-          <q-btn flat dense icon="logout" label="Déconnexion" @click="handleLogout" />
+          <q-btn flat dense round icon="logout" @click="handleLogout" />
         </template>
 
-        <q-btn v-else flat dense icon="login" label="Connexion" to="/login" />
+        <q-btn v-else flat dense round icon="login" to="/login" />
       </q-toolbar>
     </q-header>
 

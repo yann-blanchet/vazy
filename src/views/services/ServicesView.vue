@@ -1,27 +1,27 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row q-mb-md items-center">
+    <div class="row q-mb-sm items-center">
       <div class="col">
-        <div class="text-h5">Services</div>
+        <div class="text-h6">Services</div>
       </div>
       <div class="col-auto">
-        <q-btn label="Ajouter un service" color="primary" icon="add" @click="openNewServiceDialog" unelevated />
+        <q-btn label="Ajouter" color="primary" icon="add" @click="openNewServiceDialog" flat dense />
       </div>
     </div>
 
     <div v-if="servicesStore.services && servicesStore.services.length > 0">
       <div v-for="category in groupedServices"
-        :key="`category-${category.id || 'no-category'}-${category.services.length}`" class="q-mb-lg">
-        <div class="row items-center q-mb-md q-px-sm">
+        :key="`category-${category.id || 'no-category'}-${category.services.length}`" class="q-mb-md">
+        <div class="row items-center q-mb-sm q-px-sm">
           <div class="col">
-            <div class="text-h6">{{ category.name || 'Sans catégorie' }}</div>
+            <div class="text-subtitle1">{{ category.name || 'Sans catégorie' }}</div>
           </div>
           <div v-if="category.id" class="col-auto">
-            <q-btn flat dense icon="edit" size="sm" @click="editCategory(category)" />
-            <q-btn flat dense icon="delete" size="sm" color="negative" @click="deleteCategory(category.id)" />
+            <q-btn flat dense round icon="edit" size="sm" @click="editCategory(category)" />
+            <q-btn flat dense round icon="delete" size="sm" color="negative" @click="deleteCategory(category.id)" />
           </div>
         </div>
-        <q-list bordered>
+        <q-list bordered flat>
           <q-item v-for="service in category.services" :key="service.id" clickable @click="editService(service)">
             <q-item-section>
               <q-item-label>{{ service.name }}</q-item-label>
@@ -43,9 +43,9 @@
       </div>
     </div>
 
-    <q-card v-else class="q-pa-lg text-center">
-      <div class="text-grey-7">
-        Aucun service pour le moment. Ajoutez-en un pour commencer.
+    <q-card v-else flat bordered class="q-pa-md text-center">
+      <div class="text-body2 text-grey-7">
+        Aucun service pour le moment
       </div>
     </q-card>
 

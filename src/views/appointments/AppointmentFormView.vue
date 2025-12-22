@@ -1,20 +1,20 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row q-mb-md items-center">
+    <div class="row q-mb-sm items-center">
       <div class="col-auto">
-        <q-btn flat icon="arrow_back" @click="goBack" />
+        <q-btn flat icon="arrow_back" dense @click="goBack" />
       </div>
       <div class="col">
-        <div class="text-h5">{{ isEdit ? 'Modifier' : 'Nouveau' }} rendez-vous</div>
+        <div class="text-h6">{{ isEdit ? 'Modifier' : 'Nouveau' }} rendez-vous</div>
       </div>
     </div>
 
-    <q-card>
-      <q-card-section>
-        <q-form ref="appointmentFormRef" @submit.prevent="saveAppointment" class="q-gutter-md">
+    <q-card flat bordered>
+      <q-card-section class="q-pa-md">
+        <q-form ref="appointmentFormRef" @submit.prevent="saveAppointment" class="q-gutter-sm">
           <!-- Service Selection -->
           <q-select v-model="appointmentForm.service_id" :options="serviceOptions" option-value="id"
-            option-label="name" emit-value map-options label="Service *" outlined
+            option-label="name" emit-value map-options label="Service *" outlined dense
             :rules="[val => !!val || 'Service requis']" :disable="isEdit">
             <template v-slot:option="scope">
               <q-item v-bind="scope.itemProps">
@@ -28,45 +28,45 @@
           </q-select>
 
           <!-- Date and Time -->
-          <div class="row q-gutter-md">
+          <div class="row q-gutter-sm">
             <div class="col">
-              <q-input v-model="appointmentForm.date" label="Date *" type="date" outlined
+              <q-input v-model="appointmentForm.date" label="Date *" type="date" outlined dense
                 :rules="[val => !!val || 'Date requise']" :min="minDate" />
             </div>
             <div class="col">
-              <q-input v-model="appointmentForm.time" label="Heure *" type="time" outlined
+              <q-input v-model="appointmentForm.time" label="Heure *" type="time" outlined dense
                 :rules="[val => !!val || 'Heure requise']" />
             </div>
           </div>
 
           <!-- Customer Information -->
-          <q-separator class="q-my-md" />
-          <div class="text-subtitle2 q-mb-sm">Informations client</div>
+          <q-separator class="q-my-sm" />
+          <div class="text-caption text-grey-7 q-mb-xs">Informations client</div>
 
-          <q-input v-model="appointmentForm.customer_name" label="Nom complet *" outlined
+          <q-input v-model="appointmentForm.customer_name" label="Nom complet *" outlined dense
             :rules="[val => !!val || 'Nom requis']" />
 
-          <div class="row q-gutter-md">
+          <div class="row q-gutter-sm">
             <div class="col">
-              <q-input v-model="appointmentForm.customer_email" label="Email *" type="email" outlined
+              <q-input v-model="appointmentForm.customer_email" label="Email *" type="email" outlined dense
                 :rules="[val => !!val || 'Email requis', val => /.+@.+\..+/.test(val) || 'Email invalide']" />
             </div>
             <div class="col">
-              <q-input v-model="appointmentForm.customer_phone" label="Téléphone" outlined />
+              <q-input v-model="appointmentForm.customer_phone" label="Téléphone" outlined dense />
             </div>
           </div>
 
           <!-- Notes -->
-          <q-input v-model="appointmentForm.notes" label="Notes (optionnel)" type="textarea" outlined rows="3" />
+          <q-input v-model="appointmentForm.notes" label="Notes (optionnel)" type="textarea" outlined dense rows="3" />
 
           <!-- Status (only for editing) -->
           <q-select v-if="isEdit" v-model="appointmentForm.status" :options="statusOptions" label="Statut"
-            outlined />
+            outlined dense />
 
-          <div class="row justify-end q-mt-lg">
-            <q-btn flat label="Annuler" @click="goBack" />
+          <div class="row justify-end q-mt-md">
+            <q-btn flat label="Annuler" @click="goBack" dense />
             <q-btn type="submit" label="Enregistrer" color="primary" :loading="appointmentsStore.loading"
-              unelevated />
+              flat dense />
           </div>
         </q-form>
       </q-card-section>

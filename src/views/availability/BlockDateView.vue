@@ -1,42 +1,41 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row q-mb-md items-center">
+    <div class="row q-mb-sm items-center">
       <div class="col-auto">
-        <q-btn flat icon="arrow_back" @click="goBack" />
+        <q-btn flat icon="arrow_back" dense @click="goBack" />
       </div>
       <div class="col">
-        <div class="text-h5">Bloquer une date</div>
+        <div class="text-h6">Bloquer une date</div>
       </div>
     </div>
 
-    <q-card>
-      <q-card-section>
-        <q-form ref="blockDateFormRef" @submit.prevent="saveBlockDate" class="q-gutter-md">
+    <q-card flat bordered>
+      <q-card-section class="q-pa-md">
+        <q-form ref="blockDateFormRef" @submit.prevent="saveBlockDate" class="q-gutter-sm">
           <!-- Date -->
-          <q-input v-model="blockForm.date" label="Date *" type="date" outlined
+          <q-input v-model="blockForm.date" label="Date *" type="date" outlined dense
             :rules="[val => !!val || 'Date requise']" :min="minDate" />
 
           <!-- Time Range (optional) -->
-          <q-toggle v-model="blockForm.hasTimeRange" label="Bloquer une plage horaire spécifique" />
+          <q-toggle v-model="blockForm.hasTimeRange" label="Plage horaire spécifique" dense />
 
           <template v-if="blockForm.hasTimeRange">
-            <div class="row q-gutter-md">
+            <div class="row q-gutter-sm">
               <div class="col">
-                <q-input v-model="blockForm.start_time" label="Heure de début" type="time" outlined />
+                <q-input v-model="blockForm.start_time" label="Heure de début" type="time" outlined dense />
               </div>
               <div class="col">
-                <q-input v-model="blockForm.end_time" label="Heure de fin" type="time" outlined />
+                <q-input v-model="blockForm.end_time" label="Heure de fin" type="time" outlined dense />
               </div>
             </div>
           </template>
 
           <!-- Reason -->
-          <q-input v-model="blockForm.reason" label="Raison (optionnel)" type="textarea" outlined rows="3"
-            hint="Ex: Jour férié, Congés, Maintenance..." />
+          <q-input v-model="blockForm.reason" label="Raison (optionnel)" type="textarea" outlined dense rows="3" />
 
-          <div class="row justify-end q-mt-lg">
-            <q-btn flat label="Annuler" @click="goBack" />
-            <q-btn type="submit" label="Bloquer" color="primary" :loading="availabilityStore.loading" unelevated />
+          <div class="row justify-end q-mt-md">
+            <q-btn flat label="Annuler" @click="goBack" dense />
+            <q-btn type="submit" label="Bloquer" color="primary" :loading="availabilityStore.loading" flat dense />
           </div>
         </q-form>
       </q-card-section>

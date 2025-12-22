@@ -1,27 +1,27 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row q-mb-md items-center">
+    <div class="row q-mb-sm items-center">
       <div class="col-auto">
-        <q-btn flat icon="arrow_back" @click="goBack" />
+        <q-btn flat icon="arrow_back" dense @click="goBack" />
       </div>
       <div class="col">
-        <div class="text-h5">{{ isEdit ? 'Modifier' : 'Nouveau' }} service</div>
+        <div class="text-h6">{{ isEdit ? 'Modifier' : 'Nouveau' }} service</div>
       </div>
     </div>
 
-    <q-card>
-      <q-card-section>
-        <q-form ref="serviceFormRef" @submit.prevent="saveService" class="q-gutter-md">
-          <q-input v-model="serviceForm.name" label="Nom du service *" :rules="[val => !!val || 'Requis']" outlined />
+    <q-card flat bordered>
+      <q-card-section class="q-pa-md">
+        <q-form ref="serviceFormRef" @submit.prevent="saveService" class="q-gutter-sm">
+          <q-input v-model="serviceForm.name" label="Nom du service *" :rules="[val => !!val || 'Requis']" outlined dense />
 
-          <q-input v-model="serviceForm.description" label="Description" type="textarea" outlined />
+          <q-input v-model="serviceForm.description" label="Description" type="textarea" outlined dense rows="3" />
 
-          <div class="row q-gutter-md">
+          <div class="row q-gutter-sm">
             <q-input v-model.number="serviceForm.duration" label="Durée (minutes) *" type="number"
-              :rules="[val => !!val && val > 0 || 'Requis']" outlined class="col" />
+              :rules="[val => !!val && val > 0 || 'Requis']" outlined dense class="col" />
 
             <q-input v-model.number="serviceForm.price" label="Prix (€) *" type="number" step="0.01"
-              :rules="[val => !!val && val >= 0 || 'Requis']" outlined class="col" />
+              :rules="[val => !!val && val >= 0 || 'Requis']" outlined dense class="col" />
           </div>
 
           <q-select 
@@ -33,12 +33,12 @@
             map-options 
             label="Catégorie" 
             outlined 
+            dense
             clearable 
             use-input
             input-debounce="0"
             new-value-mode="add"
-            @new-value="createCategoryFromSelect"
-            hint="Sélectionnez une catégorie ou tapez pour en créer une nouvelle">
+            @new-value="createCategoryFromSelect">
             <template v-slot:no-option>
               <q-item>
                 <q-item-section class="text-grey">
@@ -48,11 +48,11 @@
             </template>
           </q-select>
 
-          <q-toggle v-model="serviceForm.visible" label="Visible sur la page publique" />
+          <q-toggle v-model="serviceForm.visible" label="Visible sur la page publique" dense />
 
-          <div class="row justify-end q-mt-lg">
-            <q-btn flat label="Annuler" @click="goBack" />
-            <q-btn type="submit" label="Enregistrer" color="primary" :loading="servicesStore.loading" unelevated />
+          <div class="row justify-end q-mt-md">
+            <q-btn flat label="Annuler" @click="goBack" dense />
+            <q-btn type="submit" label="Enregistrer" color="primary" :loading="servicesStore.loading" flat dense />
           </div>
         </q-form>
       </q-card-section>

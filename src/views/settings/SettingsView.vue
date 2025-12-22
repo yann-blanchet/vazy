@@ -1,30 +1,29 @@
 <template>
   <q-page class="q-pa-md">
+    <div class="text-h6 q-mb-sm">Paramètres</div>
 
-    <div class="text-h5 q-mb-md">Paramètres</div>
+    <q-card flat bordered class="q-mb-sm">
+      <q-card-section class="q-pa-md">
+        <div class="text-subtitle1 q-mb-sm">Informations du commerce</div>
+        <q-form @submit="updateBusiness" class="q-gutter-sm">
+          <q-input v-model="businessForm.business_name" label="Nom du commerce" outlined dense />
 
-    <q-card class="q-mb-md">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">Informations du commerce</div>
-        <q-form @submit="updateBusiness" class="q-gutter-md">
-          <q-input v-model="businessForm.business_name" label="Nom du commerce" outlined />
+          <q-input v-model="businessForm.address" label="Adresse" outlined dense />
 
-          <q-input v-model="businessForm.address" label="Adresse" outlined />
+          <q-input v-model="businessForm.city" label="Ville" outlined dense />
 
-          <q-input v-model="businessForm.city" label="Ville" outlined />
+          <q-input v-model="businessForm.description" label="Description" type="textarea" outlined dense rows="3" />
 
-          <q-input v-model="businessForm.description" label="Description" type="textarea" outlined />
-
-          <q-btn type="submit" label="Enregistrer" color="primary" :loading="businessStore.loading" unelevated />
+          <q-btn type="submit" label="Enregistrer" color="primary" :loading="businessStore.loading" flat dense />
         </q-form>
       </q-card-section>
     </q-card>
 
-    <q-card class="q-mb-md">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">Horaires d'ouverture</div>
-        <q-form @submit="updateHours" class="q-gutter-md">
-          <div v-for="day in days" :key="day.value" class="q-mb-md">
+    <q-card flat bordered>
+      <q-card-section class="q-pa-md">
+        <div class="text-subtitle1 q-mb-sm">Horaires d'ouverture</div>
+        <q-form @submit="updateHours" class="q-gutter-sm">
+          <div v-for="day in days" :key="day.value" class="q-mb-sm">
             <div class="row items-center q-mb-xs">
               <div class="col-12 col-sm-3">
                 <q-checkbox v-model="hoursForm[day.value].open" :label="day.label" dense />
@@ -32,11 +31,11 @@
               <div v-if="hoursForm[day.value].open" class="col-12 col-sm-9">
                 <div class="row items-center q-gutter-xs">
                   <q-input v-model="hoursForm[day.value].start" label="Ouverture" mask="##:##" placeholder="09:00"
-                    outlined dense style="max-width: 120px"
+                    outlined dense style="max-width: 110px"
                     :rules="[val => !val || /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(val) || 'Format HH:mm']" />
-                  <span class="self-center q-mx-xs">-</span>
+                  <span class="self-center text-grey-7">-</span>
                   <q-input v-model="hoursForm[day.value].end" label="Fermeture" mask="##:##" placeholder="18:00"
-                    outlined dense style="max-width: 120px"
+                    outlined dense style="max-width: 110px"
                     :rules="[val => !val || /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(val) || 'Format HH:mm']" />
                 </div>
               </div>
@@ -46,22 +45,22 @@
             </div>
             <div v-if="hoursForm[day.value].open" class="row items-center q-ml-md q-mt-xs">
               <div class="col-12 col-sm-3">
-                <q-checkbox v-model="hoursForm[day.value].hasBreak" label="Pause déjeuner" dense />
+                <q-checkbox v-model="hoursForm[day.value].hasBreak" label="Pause" dense />
               </div>
               <div v-if="hoursForm[day.value].hasBreak" class="col-12 col-sm-9 row items-center q-gutter-xs">
-                <q-input v-model="hoursForm[day.value].breakStart" label="Début pause" mask="##:##" placeholder="12:00"
-                  outlined dense style="max-width: 120px"
+                <q-input v-model="hoursForm[day.value].breakStart" label="Début" mask="##:##" placeholder="12:00"
+                  outlined dense style="max-width: 110px"
                   :rules="[val => !val || /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(val) || 'Format HH:mm']" />
-                <span class="self-center q-mx-xs">-</span>
-                <q-input v-model="hoursForm[day.value].breakEnd" label="Fin pause" mask="##:##" placeholder="14:00"
-                  outlined dense style="max-width: 120px"
+                <span class="self-center text-grey-7">-</span>
+                <q-input v-model="hoursForm[day.value].breakEnd" label="Fin" mask="##:##" placeholder="14:00"
+                  outlined dense style="max-width: 110px"
                   :rules="[val => !val || /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(val) || 'Format HH:mm']" />
               </div>
             </div>
           </div>
-          <div class="q-mt-md">
+          <div class="q-mt-sm">
             <q-btn type="submit" label="Enregistrer les horaires" color="primary" :loading="businessStore.loading"
-              unelevated />
+              unelevated dense />
           </div>
         </q-form>
       </q-card-section>

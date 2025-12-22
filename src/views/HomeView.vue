@@ -6,9 +6,9 @@
       <div class="text-h6 text-grey-7 q-mb-lg">
         Pour coiffeurs, barbiers et esthéticiens
       </div>
-      <div class="q-gutter-md">
-        <q-btn label="Se connecter" color="primary" size="lg" to="/login" unelevated />
-        <q-btn label="Créer un compte" color="primary" outline size="lg" to="/signup" />
+      <div class="q-gutter-sm">
+        <q-btn label="Se connecter" color="primary" to="/login" flat dense />
+        <q-btn label="Créer un compte" color="primary" outline to="/signup" dense />
       </div>
     </div>
   </q-page>

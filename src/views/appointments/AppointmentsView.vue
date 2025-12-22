@@ -1,18 +1,18 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row q-mb-md items-center">
+    <div class="row q-mb-sm items-center">
       <div class="col">
-        <div class="text-h5">Rendez-vous</div>
+        <div class="text-h6">Rendez-vous</div>
       </div>
       <div class="col-auto">
-        <q-btn label="Ajouter" color="primary" icon="add" @click="openNewAppointmentDialog" unelevated />
+        <q-btn label="Ajouter" color="primary" icon="add" @click="openNewAppointmentDialog" flat dense />
       </div>
     </div>
 
     <!-- Calendar View -->
-    <q-card>
-      <q-card-section>
-        <div class="row justify-center q-mb-md">
+    <q-card flat bordered>
+      <q-card-section class="q-pa-md">
+        <div class="row justify-center q-mb-sm">
           <div class="col-auto">
             <q-btn-toggle
               v-model="calendarViewMode"
@@ -23,29 +23,24 @@
               dense
               unelevated
               rounded
-              glossy
               color="primary"
-              toggle-color="white"
-              text-color="white"
-              toggle-text-color="primary"
-              class="bg-primary text-white shadow-1"
             />
           </div>
         </div>
 
         <!-- Vue créneaux (heures sur plusieurs jours) -->
-        <div v-if="calendarViewMode === 'hours'" class="row q-col-gutter-md">
+        <div v-if="calendarViewMode === 'hours'" class="row q-col-gutter-sm">
           <!-- Colonnes par jour avec créneaux horaires -->
           <div
             v-for="day in timeGridDays"
             :key="day.date"
             class="col-12 col-md-4"
           >
-            <div class="text-subtitle2 q-mb-xs">
+            <div class="text-caption text-weight-medium q-mb-xs">
               {{ day.label }}
             </div>
             <div v-if="day.slots.length">
-              <q-list dense bordered class="rounded-borders">
+              <q-list dense bordered flat class="rounded-borders">
                 <q-item
                   v-for="slot in day.slots"
                   :key="slot.time"
@@ -81,20 +76,20 @@
         </div>
 
         <!-- Vue semaine (rendez-vous groupés par jour de la semaine en cours) -->
-        <div v-else class="row q-col-gutter-md">
+        <div v-else class="row q-col-gutter-sm">
           <div
             v-for="day in weekDays"
             :key="day.date"
             class="col-12 col-sm-6 col-md-3"
           >
-            <div class="text-subtitle2 q-mb-xs">
+            <div class="text-caption text-weight-medium q-mb-xs">
               {{ day.label }}
             </div>
-            <div class="text-caption text-grey q-mb-xs">
+            <div class="text-caption text-grey-7 q-mb-xs">
               {{ day.appointments.length }} rendez-vous
             </div>
 
-            <q-list v-if="day.appointments.length" dense bordered class="rounded-borders">
+            <q-list v-if="day.appointments.length" dense bordered flat class="rounded-borders">
               <q-item
                 v-for="apt in day.appointments"
                 :key="apt.id"
