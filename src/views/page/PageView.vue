@@ -90,136 +90,158 @@
       <q-tab-panel name="settings">
         <q-card>
           <q-card-section>
-            <q-form @submit="updatePage" class="q-gutter-md">
+            <div class="q-gutter-md">
               <!-- Nom affiché -->
-              <q-input
-                v-model="pageForm.business_name"
-                label="Nom affiché *"
-                outlined
-                :rules="[val => !!val || 'Requis']"
-              />
+              <div>
+                <div class="text-subtitle2 q-mb-sm">Nom affiché</div>
+                <q-card flat bordered>
+                  <q-card-section class="q-pa-md">
+                    <div class="row items-center">
+                      <div class="col">
+                        <div class="text-body1 text-weight-medium">
+                          {{ pageForm.business_name || 'Non défini' }}
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <q-btn
+                          icon="edit"
+                          flat
+                          dense
+                          round
+                          color="primary"
+                          @click="openEditNameSheet"
+                        />
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
 
               <!-- Description -->
-              <q-input
-                v-model="pageForm.description"
-                label="Description"
-                type="textarea"
-                outlined
-                rows="4"
-                
-              />
-
-              <!-- Logo -->
               <div>
-                <div class="text-subtitle2 q-mb-sm">Logo</div>
-                <div class="row q-gutter-md items-center">
-                  <div class="col-auto">
-                    <q-avatar v-if="logoPreview || pageForm.logo_url" size="80px">
-                      <img 
-                        :src="logoPreview || pageForm.logo_url" 
-                        alt="Logo" 
-                        @error="handleImageError"
-                        @load="console.log('✅ Logo image loaded successfully')"
-                      />
-                    </q-avatar>
-                    <q-avatar v-else size="80px" color="grey-3">
-                      <q-icon name="image" size="40px" color="grey-6" />
-                    </q-avatar>
-                  </div>
-                  <div class="col">
-                    <q-file
-                      v-model="logoFile"
-                      label="Sélectionner un logo"
-                      accept="image/*"
-                      outlined
-                      @update:model-value="handleLogoFileSelect"
-                      :loading="uploadingLogo"
-                      :disable="uploadingLogo"
-                    >
-                      <template v-slot:prepend>
-                        <q-icon name="attach_file" />
-                      </template>
-                      <template v-slot:append v-if="pageForm.logo_url">
+                <div class="text-subtitle2 q-mb-sm">Description</div>
+                <q-card flat bordered>
+                  <q-card-section class="q-pa-md">
+                    <div class="row items-start">
+                      <div class="col">
+                        <div class="text-body2">
+                          {{ pageForm.description || 'Aucune description' }}
+                        </div>
+                      </div>
+                      <div class="col-auto">
                         <q-btn
-                          icon="delete"
+                          icon="edit"
                           flat
                           dense
                           round
-                          @click.stop="removeLogo"
-                          :disable="uploadingLogo"
+                          color="primary"
+                          @click="openEditDescriptionSheet"
                         />
-                      </template>
-                    </q-file>
-                    <div v-if="uploadingLogo" class="q-mt-sm">
-                      <q-linear-progress :value="logoProgress / 100" color="primary" />
-                      <div class="text-caption text-grey-7 q-mt-xs">Téléchargement en cours...</div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </q-card-section>
+                </q-card>
               </div>
 
-              <!-- Photo de couverture -->
+              <!-- Photos (max 4, première = couverture) -->
               <div>
-                <div class="text-subtitle2 q-mb-sm">Photo de couverture</div>
-                <div class="row q-gutter-md items-center">
-                  <div class="col-auto">
-                    <div v-if="coverPreview || pageForm.cover_photo_url" class="cover-preview">
-                      <img 
-                        :src="coverPreview || pageForm.cover_photo_url" 
-                        alt="Cover" 
-                        class="cover-image" 
-                        @error="handleImageError"
-                        @load="console.log('✅ Cover image loaded successfully')"
-                      />
-                    </div>
-                    <div v-else class="cover-placeholder">
-                      <q-icon name="image" size="40px" color="grey-6" />
-                    </div>
-                  </div>
-                  <div class="col">
-                    <q-file
-                      v-model="coverFile"
-                      label="Sélectionner une photo de couverture"
-                      accept="image/*"
-                      outlined
-                      @update:model-value="handleCoverFileSelect"
-                      :loading="uploadingCover"
-                      :disable="uploadingCover"
+                <div class="text-subtitle2 q-mb-sm">
+                  Photos (maximum 4)
+                  <q-badge v-if="businessPhotos.length > 0" color="primary" class="q-ml-sm">
+                    {{ businessPhotos.length }}/4
+                  </q-badge>
+                </div>
+                <div class="text-caption text-grey-7 q-mb-md">
+                  La première photo devient automatiquement la photo de couverture
+                </div>
+
+                <!-- Liste des photos existantes -->
+                <div v-if="businessPhotos.length > 0" class="q-mb-md">
+                  <div class="row q-gutter-sm">
+                    <div
+                      v-for="(photo, index) in businessPhotos"
+                      :key="photo.id"
+                      class="col-12 col-sm-6 col-md-3"
                     >
-                      <template v-slot:prepend>
-                        <q-icon name="attach_file" />
-                      </template>
-                      <template v-slot:append v-if="pageForm.cover_photo_url">
-                        <q-btn
-                          icon="delete"
-                          flat
-                          dense
-                          round
-                          @click.stop="removeCover"
-                          :disable="uploadingCover"
-                        />
-                      </template>
-                    </q-file>
-                    <div v-if="uploadingCover" class="q-mt-sm">
-                      <q-linear-progress :value="coverProgress / 100" color="primary" />
-                      <div class="text-caption text-grey-7 q-mt-xs">Téléchargement en cours...</div>
+                      <q-card class="photo-card">
+                        <q-img
+                          :src="photo.photo_url"
+                          :alt="`Photo ${index + 1}`"
+                          style="height: 150px"
+                          @error="handleImageError"
+                        >
+                          <div class="absolute-top-right q-pa-xs">
+                            <q-badge
+                              v-if="index === 0"
+                              color="primary"
+                              label="Couverture"
+                            />
+                          </div>
+                          <div class="absolute-bottom-right q-pa-xs">
+                            <q-btn
+                              icon="delete"
+                              size="sm"
+                              round
+                              dense
+                              color="negative"
+                              @click="removePhoto(photo.id)"
+                              :disable="uploadingPhotos"
+                            />
+                          </div>
+                        </q-img>
+                        <q-card-section class="q-pa-sm">
+                          <div class="row q-gutter-xs justify-center">
+                            <q-btn
+                              v-if="index > 0"
+                              icon="arrow_upward"
+                              size="xs"
+                              flat
+                              dense
+                              @click="movePhotoUp(index)"
+                              :disable="uploadingPhotos"
+                            />
+                            <q-btn
+                              v-if="index < businessPhotos.length - 1"
+                              icon="arrow_downward"
+                              size="xs"
+                              flat
+                              dense
+                              @click="movePhotoDown(index)"
+                              :disable="uploadingPhotos"
+                            />
+                          </div>
+                        </q-card-section>
+                      </q-card>
                     </div>
                   </div>
                 </div>
+
+                <!-- Upload de nouvelle photo -->
+                <div v-if="businessPhotos.length < 4">
+                  <q-file
+                    v-model="photoFile"
+                    label="Ajouter une photo"
+                    accept="image/*"
+                    outlined
+                    @update:model-value="handlePhotoFileSelect"
+                    :loading="uploadingPhotos"
+                    :disable="uploadingPhotos || businessPhotos.length >= 4"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="attach_file" />
+                    </template>
+                  </q-file>
+                  <div v-if="uploadingPhotos" class="q-mt-sm">
+                    <q-linear-progress :value="photoProgress / 100" color="primary" />
+                    <div class="text-caption text-grey-7 q-mt-xs">Téléchargement en cours...</div>
+                  </div>
+                </div>
+                <div v-else class="text-caption text-grey-7">
+                  Maximum de 4 photos atteint. Supprimez une photo pour en ajouter une nouvelle.
+                </div>
               </div>
 
-              <!-- Bouton de sauvegarde unique -->
-              <div class="q-mt-md">
-                <q-btn
-                  type="submit"
-                  label="Enregistrer les modifications"
-                  color="primary"
-                  :loading="businessStore.loading"
-                  unelevated
-                  class="full-width"
-                />
-              </div>
-            </q-form>
+            </div>
           </q-card-section>
         </q-card>
       </q-tab-panel>
@@ -270,6 +292,75 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Bottom Sheet pour éditer le nom -->
+    <q-dialog v-model="showEditNameSheet" position="bottom">
+      <q-card class="bottom-sheet-card">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">Modifier le nom affiché</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="showEditNameSheet = false" />
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit.prevent="saveName" class="q-gutter-md">
+            <q-input
+              v-model="editNameForm.business_name"
+              label="Nom affiché *"
+              outlined
+              :rules="[val => !!val || 'Requis']"
+              autofocus
+            />
+
+            <q-card-actions align="right" class="q-mt-md">
+              <q-btn flat label="Annuler" color="grey" @click="showEditNameSheet = false" />
+              <q-btn
+                type="submit"
+                label="Enregistrer"
+                color="primary"
+                :loading="businessStore.loading"
+                unelevated
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Bottom Sheet pour éditer la description -->
+    <q-dialog v-model="showEditDescriptionSheet" position="bottom">
+      <q-card class="bottom-sheet-card">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">Modifier la description</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="showEditDescriptionSheet = false" />
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit.prevent="saveDescription" class="q-gutter-md">
+            <q-input
+              v-model="editDescriptionForm.description"
+              label="Description"
+              type="textarea"
+              outlined
+              rows="6"
+              autofocus
+            />
+
+            <q-card-actions align="right" class="q-mt-md">
+              <q-btn flat label="Annuler" color="grey" @click="showEditDescriptionSheet = false" />
+              <q-btn
+                type="submit"
+                label="Enregistrer"
+                color="primary"
+                :loading="businessStore.loading"
+                unelevated
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -281,21 +372,24 @@ import { useImageUpload } from '../../composables/useImageUpload'
 
 const businessStore = useBusinessStore()
 const { showNotification } = useNotifications()
-const { uploading: uploadingLogo, uploadProgress: logoProgress, uploadImage: uploadLogoImage, deleteImage } = useImageUpload()
-const { uploading: uploadingCover, uploadProgress: coverProgress, uploadImage: uploadCoverImage } = useImageUpload()
+const { uploading: uploadingPhotos, uploadProgress: photoProgress, uploadImage: uploadPhotoImage, deleteImage } = useImageUpload()
 
 const activeTab = ref('page')
-const logoFile = ref(null)
-const coverFile = ref(null)
-const logoPreview = ref(null)
-const coverPreview = ref(null)
+const photoFile = ref(null)
+const businessPhotos = ref([])
 const showEditUrlModal = ref(false)
+const showEditNameSheet = ref(false)
+const showEditDescriptionSheet = ref(false)
+const editNameForm = reactive({
+  business_name: ''
+})
+const editDescriptionForm = reactive({
+  description: ''
+})
 
 const pageForm = reactive({
   business_name: '',
   description: '',
-  logo_url: '',
-  cover_photo_url: '',
   is_public_enabled: true
 })
 
@@ -325,24 +419,103 @@ watch(() => businessStore.business, (newBusiness) => {
   }
 }, { deep: true })
 
-function loadBusinessData() {
+async function loadBusinessData() {
   const business = businessStore.business
   Object.assign(pageForm, {
     business_name: business.business_name || '',
     description: business.description || '',
-    logo_url: business.logo_url || '',
-    cover_photo_url: business.cover_photo_url || '',
     is_public_enabled: business.is_public_enabled !== false // Default to true if not set
   })
   slugForm.slug = business.slug || ''
+  
+  // Initialize edit forms
+  editNameForm.business_name = pageForm.business_name
+  editDescriptionForm.description = pageForm.description
+  
+  // Load photos
+  await loadPhotos()
+}
+
+function openEditNameSheet() {
+  editNameForm.business_name = pageForm.business_name
+  showEditNameSheet.value = true
+}
+
+function openEditDescriptionSheet() {
+  editDescriptionForm.description = pageForm.description
+  showEditDescriptionSheet.value = true
+}
+
+async function saveName() {
+  if (!editNameForm.business_name || editNameForm.business_name.trim() === '') {
+    showNotification({
+      message: 'Le nom est requis',
+      type: 'error',
+      icon: 'error',
+      timeout: 3000
+    })
+    return
+  }
+
+  const updates = {
+    business_name: editNameForm.business_name.trim()
+  }
+
+  const { error } = await businessStore.updateBusiness(updates)
+  if (error) {
+    showNotification({
+      message: error.message || 'Erreur lors de la mise à jour',
+      type: 'error',
+      icon: 'error',
+      timeout: 4000
+    })
+  } else {
+    pageForm.business_name = editNameForm.business_name.trim()
+    showEditNameSheet.value = false
+    showNotification({
+      message: 'Nom mis à jour avec succès',
+      type: 'success',
+      icon: 'check_circle',
+      timeout: 3000
+    })
+  }
+}
+
+async function saveDescription() {
+  const updates = {
+    description: editDescriptionForm.description.trim() || null
+  }
+
+  const { error } = await businessStore.updateBusiness(updates)
+  if (error) {
+    showNotification({
+      message: error.message || 'Erreur lors de la mise à jour',
+      type: 'error',
+      icon: 'error',
+      timeout: 4000
+    })
+  } else {
+    pageForm.description = editDescriptionForm.description.trim() || ''
+    showEditDescriptionSheet.value = false
+    showNotification({
+      message: 'Description mise à jour avec succès',
+      type: 'success',
+      icon: 'check_circle',
+      timeout: 3000
+    })
+  }
+}
+
+async function loadPhotos() {
+  if (!businessStore.business) return
+  const photos = await businessStore.loadBusinessPhotos()
+  businessPhotos.value = photos || []
 }
 
 async function updatePage() {
   const updates = {
     business_name: pageForm.business_name,
-    description: pageForm.description,
-    logo_url: pageForm.logo_url || null,
-    cover_photo_url: pageForm.cover_photo_url || null
+    description: pageForm.description
   }
 
   const { error } = await businessStore.updateBusiness(updates)
@@ -480,204 +653,170 @@ function handleImageError(event) {
   img.style.opacity = '0.3'
 }
 
-function handleLogoFileSelect(file) {
-  console.log('🖼️ handleLogoFileSelect called with file:', file)
+function handlePhotoFileSelect(file) {
+  console.log('🖼️ handlePhotoFileSelect called with file:', file)
   
   if (!file) {
-    console.warn('⚠️ No file in handleLogoFileSelect')
-    logoPreview.value = null
+    console.warn('⚠️ No file in handlePhotoFileSelect')
     return
   }
 
-  // Create preview URL immediately
-  logoPreview.value = URL.createObjectURL(file)
-  
-  // Start upload
-  handleLogoUpload(file)
-}
-
-async function handleLogoUpload(file) {
-  console.log('🖼️ handleLogoUpload called with file:', file)
-  
-  if (!file) {
-    console.warn('⚠️ No file in handleLogoUpload')
-    return
-  }
-
-  try {
-    console.log('📤 Starting logo upload...')
-    const result = await uploadLogoImage(file)
-    console.log('✅ Logo upload result:', result)
-    
-    // Clean up preview URL
-    if (logoPreview.value) {
-      URL.revokeObjectURL(logoPreview.value)
-      logoPreview.value = null
-    }
-    
-    pageForm.logo_url = result.url
-    
-    // Auto-save after upload
-    await updatePage()
-    
+  if (businessPhotos.value.length >= 4) {
     showNotification({
-      message: 'Logo téléchargé avec succès',
-      type: 'success',
-      icon: 'check_circle',
-      timeout: 3000
-    })
-  } catch (error) {
-    // Clean up preview URL on error
-    if (logoPreview.value) {
-      URL.revokeObjectURL(logoPreview.value)
-      logoPreview.value = null
-    }
-    
-    showNotification({
-      message: error.message || 'Erreur lors du téléchargement du logo',
+      message: 'Maximum de 4 photos atteint',
       type: 'error',
       icon: 'error',
-      timeout: 4000
+      timeout: 3000
     })
-    logoFile.value = null
-  }
-}
-
-function handleCoverFileSelect(file) {
-  console.log('🖼️ handleCoverFileSelect called with file:', file)
-  
-  if (!file) {
-    console.warn('⚠️ No file in handleCoverFileSelect')
-    coverPreview.value = null
+    photoFile.value = null
     return
   }
 
-  // Create preview URL immediately
-  coverPreview.value = URL.createObjectURL(file)
-  
   // Start upload
-  handleCoverUpload(file)
+  handlePhotoUpload(file)
 }
 
-async function handleCoverUpload(file) {
-  console.log('🖼️ handleCoverUpload called with file:', file)
+async function handlePhotoUpload(file) {
+  console.log('🖼️ handlePhotoUpload called with file:', file)
   
   if (!file) {
-    console.warn('⚠️ No file in handleCoverUpload')
+    console.warn('⚠️ No file in handlePhotoUpload')
+    return
+  }
+
+  if (businessPhotos.value.length >= 4) {
+    showNotification({
+      message: 'Maximum de 4 photos atteint',
+      type: 'error',
+      icon: 'error',
+      timeout: 3000
+    })
+    photoFile.value = null
     return
   }
 
   try {
-    console.log('📤 Starting cover upload...')
-    const result = await uploadCoverImage(file)
-    console.log('✅ Cover upload result:', result)
+    console.log('📤 Starting photo upload...')
+    const result = await uploadPhotoImage(file)
+    console.log('✅ Photo upload result:', result)
     
-    // Clean up preview URL
-    if (coverPreview.value) {
-      URL.revokeObjectURL(coverPreview.value)
-      coverPreview.value = null
+    // Add photo to business_photos table
+    const { data, error } = await businessStore.addBusinessPhoto(result.url)
+    
+    if (error) {
+      throw error
     }
     
-    pageForm.cover_photo_url = result.url
+    // Reload photos to get updated list
+    await loadPhotos()
     
-    // Auto-save after upload
-    await updatePage()
+    photoFile.value = null
     
     showNotification({
-      message: 'Photo de couverture téléchargée avec succès',
+      message: 'Photo ajoutée avec succès',
       type: 'success',
       icon: 'check_circle',
       timeout: 3000
     })
   } catch (error) {
-    // Clean up preview URL on error
-    if (coverPreview.value) {
-      URL.revokeObjectURL(coverPreview.value)
-      coverPreview.value = null
-    }
-    
     showNotification({
       message: error.message || 'Erreur lors du téléchargement de la photo',
       type: 'error',
       icon: 'error',
       timeout: 4000
     })
-    coverFile.value = null
+    photoFile.value = null
   }
 }
 
-async function removeLogo() {
-  if (pageForm.logo_url) {
-    try {
-      await deleteImage(pageForm.logo_url)
-      pageForm.logo_url = ''
-      logoFile.value = null
-      await updatePage()
-      showNotification({
-        message: 'Logo supprimé',
-        type: 'success',
-        icon: 'check_circle',
-        timeout: 2000
-      })
-    } catch (error) {
-      showNotification({
-        message: 'Erreur lors de la suppression du logo',
-        type: 'error',
-        icon: 'error',
-        timeout: 3000
-      })
+async function removePhoto(photoId) {
+  try {
+    // Get photo URL before deletion
+    const photo = businessPhotos.value.find(p => p.id === photoId)
+    if (!photo) return
+
+    // Delete from database (this will also update cover_photo_url if needed)
+    const { error } = await businessStore.deleteBusinessPhoto(photoId)
+    
+    if (error) {
+      throw error
     }
+
+    // Delete from storage
+    if (photo.photo_url) {
+      await deleteImage(photo.photo_url)
+    }
+    
+    // Reload photos
+    await loadPhotos()
+    
+    showNotification({
+      message: 'Photo supprimée',
+      type: 'success',
+      icon: 'check_circle',
+      timeout: 3000
+    })
+  } catch (error) {
+    showNotification({
+      message: error.message || 'Erreur lors de la suppression',
+      type: 'error',
+      icon: 'error',
+      timeout: 4000
+    })
   }
 }
 
-async function removeCover() {
-  if (pageForm.cover_photo_url) {
-    try {
-      await deleteImage(pageForm.cover_photo_url)
-      pageForm.cover_photo_url = ''
-      coverFile.value = null
-      await updatePage()
-      showNotification({
-        message: 'Photo de couverture supprimée',
-        type: 'success',
-        icon: 'check_circle',
-        timeout: 2000
-      })
-    } catch (error) {
-      showNotification({
-        message: 'Erreur lors de la suppression de la photo',
-        type: 'error',
-        icon: 'error',
-        timeout: 3000
-      })
-    }
+async function movePhotoUp(index) {
+  if (index === 0) return
+  
+  const photoIds = businessPhotos.value.map(p => p.id)
+  // Swap with previous
+  [photoIds[index - 1], photoIds[index]] = [photoIds[index], photoIds[index - 1]]
+  
+  const { error } = await businessStore.reorderBusinessPhotos(photoIds)
+  
+  if (error) {
+    showNotification({
+      message: error.message || 'Erreur lors du réordonnancement',
+      type: 'error',
+      icon: 'error',
+      timeout: 4000
+    })
+  } else {
+    await loadPhotos()
+  }
+}
+
+async function movePhotoDown(index) {
+  if (index >= businessPhotos.value.length - 1) return
+  
+  const photoIds = businessPhotos.value.map(p => p.id)
+  // Swap with next
+  [photoIds[index], photoIds[index + 1]] = [photoIds[index + 1], photoIds[index]]
+  
+  const { error } = await businessStore.reorderBusinessPhotos(photoIds)
+  
+  if (error) {
+    showNotification({
+      message: error.message || 'Erreur lors du réordonnancement',
+      type: 'error',
+      icon: 'error',
+      timeout: 4000
+    })
+  } else {
+    await loadPhotos()
   }
 }
 </script>
 
 <style scoped>
-.cover-preview {
-  width: 120px;
-  height: 80px;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid #e0e0e0;
+.photo-card {
+  position: relative;
 }
 
-.cover-image {
+.bottom-sheet-card {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.cover-placeholder {
-  width: 120px;
-  height: 80px;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
-  background: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  max-width: 100vw;
+  border-radius: 16px 16px 0 0;
 }
 </style>

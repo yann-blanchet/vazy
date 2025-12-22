@@ -185,6 +185,144 @@ export const useBusinessStore = defineStore('business', () => {
     }
   }
 
+  async function loadBusinessPhotos() {
+    if (!business.value) return []
+    try {
+      const { data, error } = await supabase
+        .from('business_photos')
+        .select('*')
+        .eq('business_id', business.value.id)
+        .order('display_order', { ascending: true })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Load photos error:', error)
+      return []
+    }
+  }
+
+  async function addBusinessPhoto(photoUrl) {
+    if (!business.value) throw new Error('No business loaded')
+    
+    try {
+      // Get current photos count
+      const { count } = await supabase
+        .from('business_photos')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', business.value.id)
+
+      if (count >= 4) {
+        throw new Error('Maximum 4 photos allowed')
+      }
+
+      const newPhoto = {
+        business_id: business.value.id,
+        photo_url: photoUrl,
+        display_order: count || 0
+      }
+
+      const { data, error } = await supabase
+        .from('business_photos')
+        .insert(newPhoto)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Update cover_photo_url if this is the first photo
+      if (count === 0) {
+        await updateBusiness({ cover_photo_url: photoUrl })
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      return { data: null, error }
+    }
+  }
+
+  async function deleteBusinessPhoto(photoId) {
+    if (!business.value) throw new Error('No business loaded')
+    
+    try {
+      // Get photo to delete
+      const { data: photo } = await supabase
+        .from('business_photos')
+        .select('*')
+        .eq('id', photoId)
+        .single()
+
+      if (!photo) throw new Error('Photo not found')
+
+      // Delete photo
+      const { error } = await supabase
+        .from('business_photos')
+        .delete()
+        .eq('id', photoId)
+
+      if (error) throw error
+
+      // Reorder remaining photos
+      const { data: remainingPhotos } = await supabase
+        .from('business_photos')
+        .select('*')
+        .eq('business_id', business.value.id)
+        .order('display_order', { ascending: true })
+
+      // Update display_order for remaining photos
+      if (remainingPhotos && remainingPhotos.length > 0) {
+        for (let i = 0; i < remainingPhotos.length; i++) {
+          await supabase
+            .from('business_photos')
+            .update({ display_order: i })
+            .eq('id', remainingPhotos[i].id)
+        }
+
+        // Update cover_photo_url to first photo
+        await updateBusiness({ cover_photo_url: remainingPhotos[0].photo_url })
+      } else {
+        // No photos left, clear cover_photo_url
+        await updateBusiness({ cover_photo_url: null })
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
+  }
+
+  async function reorderBusinessPhotos(photoIds) {
+    if (!business.value) throw new Error('No business loaded')
+    
+    try {
+      // Update display_order for each photo
+      for (let i = 0; i < photoIds.length; i++) {
+        const { error } = await supabase
+          .from('business_photos')
+          .update({ display_order: i })
+          .eq('id', photoIds[i])
+
+        if (error) throw error
+      }
+
+      // Update cover_photo_url to first photo
+      const { data: firstPhoto } = await supabase
+        .from('business_photos')
+        .select('photo_url')
+        .eq('business_id', business.value.id)
+        .eq('display_order', 0)
+        .single()
+
+      if (firstPhoto) {
+        await updateBusiness({ cover_photo_url: firstPhoto.photo_url })
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
+  }
+
   function clearBusiness() {
     business.value = null
   }
@@ -197,7 +335,11 @@ export const useBusinessStore = defineStore('business', () => {
     loadBusiness,
     createBusiness,
     updateBusiness,
-    clearBusiness
+    clearBusiness,
+    loadBusinessPhotos,
+    addBusinessPhoto,
+    deleteBusinessPhoto,
+    reorderBusinessPhotos
   }
 })
 
