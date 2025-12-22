@@ -56,15 +56,15 @@
               <div class="row items-center">
                 <div class="col">
                   <div class="text-body2 text-weight-medium">
-                    {{ pageForm.is_public_enabled ? 'Page publique activée' : 'Page publique désactivée' }}
+                    {{ pageForm.is_published ? 'Page publique activée' : 'Page publique désactivée' }}
                   </div>
                 </div>
                 <div class="col-auto">
                   <q-toggle
-                    v-model="pageForm.is_public_enabled"
+                    v-model="pageForm.is_published"
                     color="primary"
                     @update:model-value="togglePublicPage"
-                    :loading="businessStore.loading"
+                    :loading="pageSettingsStore.loading"
                   />
                 </div>
               </div>
@@ -73,8 +73,8 @@
 
           <!-- Ouvrir la page -->
           <q-btn
-            :label="businessStore.business && pageForm.is_public_enabled ? 'Ouvrir la page' : 'Page désactivée'"
-            :disable="!businessStore.business || !pageForm.is_public_enabled"
+            :label="profileStore.profile && pageForm.is_published ? 'Ouvrir la page' : 'Page désactivée'"
+            :disable="!profileStore.profile || !pageForm.is_published"
             color="primary"
             icon="open_in_new"
             @click="openPublicPage"
@@ -95,7 +95,7 @@
                 <div class="col">
                   <div class="text-subtitle2 text-grey-7 q-mb-xs">Nom affiché</div>
                   <div class="text-body2 text-weight-medium">
-                    {{ pageForm.business_name || 'Non défini' }}
+                    {{ pageForm.title || 'Non défini' }}
                   </div>
                 </div>
                 <div class="col-auto">
@@ -276,7 +276,7 @@
                 type="submit"
                 label="Enregistrer"
                 color="primary"
-                :loading="businessStore.loading"
+                :loading="profileStore.loading"
                 flat
                 dense
               />
@@ -298,7 +298,7 @@
         <q-card-section class="q-pt-md">
           <q-form @submit.prevent="saveName" class="q-gutter-sm">
             <q-input
-              v-model="editNameForm.business_name"
+              v-model="editNameForm.title"
               label="Nom affiché *"
               outlined
               dense
@@ -312,7 +312,7 @@
                 type="submit"
                 label="Enregistrer"
                 color="primary"
-                :loading="businessStore.loading"
+                :loading="pageSettingsStore.loading"
                 unelevated
                 dense
               />
@@ -349,7 +349,7 @@
                 type="submit"
                 label="Enregistrer"
                 color="primary"
-                :loading="businessStore.loading"
+                :loading="pageSettingsStore.loading"
                 unelevated
                 dense
               />
@@ -363,11 +363,13 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useBusinessStore } from '../../stores/business'
+import { useProfileStore } from '../../stores/profile'
+import { usePageSettingsStore } from '../../stores/pageSettings'
 import { useNotifications } from '../../composables/useNotifications'
 import { useImageUpload } from '../../composables/useImageUpload'
 
-const businessStore = useBusinessStore()
+const profileStore = useProfileStore()
+const pageSettingsStore = usePageSettingsStore()
 const { showNotification } = useNotifications()
 const { uploading: uploadingPhotos, uploadProgress: photoProgress, uploadImage: uploadPhotoImage, deleteImage } = useImageUpload()
 
@@ -378,16 +380,16 @@ const showEditUrlModal = ref(false)
 const showEditNameSheet = ref(false)
 const showEditDescriptionSheet = ref(false)
 const editNameForm = reactive({
-  business_name: ''
+  title: ''
 })
 const editDescriptionForm = reactive({
   description: ''
 })
 
 const pageForm = reactive({
-  business_name: '',
+  title: '',
   description: '',
-  is_public_enabled: true
+  is_published: true
 })
 
 const slugForm = reactive({
@@ -399,42 +401,63 @@ const baseUrl = computed(() => {
 })
 
 const publicUrl = computed(() => {
-  if (!businessStore.business) return ''
-  return `${baseUrl.value}/${businessStore.business.slug}`
+  if (!profileStore.profile) return ''
+  return `${baseUrl.value}/${profileStore.profile.slug}`
 })
 
-onMounted(() => {
-  if (businessStore.business) {
-    loadBusinessData()
+onMounted(async () => {
+  await profileStore.loadProfile()
+  if (profileStore.profile) {
+    await pageSettingsStore.loadPageSettings()
+    loadPageData()
   }
 })
 
-// Watch for business changes
-watch(() => businessStore.business, (newBusiness) => {
-  if (newBusiness) {
-    loadBusinessData()
+// Watch for profile and page settings changes
+watch(() => [profileStore.profile, pageSettingsStore.pageSettings], () => {
+  if (profileStore.profile) {
+    loadPageData()
   }
 }, { deep: true })
 
-async function loadBusinessData() {
-  const business = businessStore.business
-  Object.assign(pageForm, {
-    business_name: business.business_name || '',
-    description: business.description || '',
-    is_public_enabled: business.is_public_enabled !== false // Default to true if not set
-  })
-  slugForm.slug = business.slug || ''
+async function loadPageData() {
+  const profile = profileStore.profile
+  const settings = pageSettingsStore.pageSettings
+  
+  if (settings) {
+    Object.assign(pageForm, {
+      title: settings.title || profile?.name || '',
+      description: settings.description || '',
+      is_published: settings.is_published !== false // Default to true if not set
+    })
+  } else {
+    Object.assign(pageForm, {
+      title: profile?.name || '',
+      description: '',
+      is_published: true
+    })
+  }
+  
+  slugForm.slug = profile?.slug || ''
   
   // Initialize edit forms
-  editNameForm.business_name = pageForm.business_name
+  editNameForm.title = pageForm.title
   editDescriptionForm.description = pageForm.description
   
-  // Load photos
-  await loadPhotos()
+  // Load photos from page_settings
+  if (settings?.photos) {
+    businessPhotos.value = settings.photos.map((url, index) => ({
+      id: `photo-${index}`,
+      photo_url: url,
+      display_order: index
+    }))
+  } else {
+    businessPhotos.value = []
+  }
 }
 
 function openEditNameSheet() {
-  editNameForm.business_name = pageForm.business_name
+  editNameForm.title = pageForm.title
   showEditNameSheet.value = true
 }
 
@@ -444,7 +467,7 @@ function openEditDescriptionSheet() {
 }
 
 async function saveName() {
-  if (!editNameForm.business_name || editNameForm.business_name.trim() === '') {
+  if (!editNameForm.title || editNameForm.title.trim() === '') {
     showNotification({
       message: 'Le nom est requis',
       type: 'error',
@@ -455,27 +478,33 @@ async function saveName() {
   }
 
   const updates = {
-    business_name: editNameForm.business_name.trim()
+    title: editNameForm.title.trim()
   }
 
-  const { error } = await businessStore.updateBusiness(updates)
-  if (error) {
-    showNotification({
-      message: error.message || 'Erreur lors de la mise à jour',
-      type: 'error',
-      icon: 'error',
-      timeout: 4000
-    })
+  // Create page_settings if it doesn't exist
+  if (!pageSettingsStore.pageSettings) {
+    await pageSettingsStore.createPageSettings(updates)
   } else {
-    pageForm.business_name = editNameForm.business_name.trim()
-    showEditNameSheet.value = false
-    showNotification({
-      message: 'Nom mis à jour avec succès',
-      type: 'success',
-      icon: 'check_circle',
-      timeout: 3000
-    })
+    const { error } = await pageSettingsStore.updatePageSettings(updates)
+    if (error) {
+      showNotification({
+        message: error.message || 'Erreur lors de la mise à jour',
+        type: 'error',
+        icon: 'error',
+        timeout: 4000
+      })
+      return
+    }
   }
+  
+  pageForm.title = editNameForm.title.trim()
+  showEditNameSheet.value = false
+  showNotification({
+    message: 'Nom mis à jour avec succès',
+    type: 'success',
+    icon: 'check_circle',
+    timeout: 3000
+  })
 }
 
 async function saveDescription() {
@@ -483,54 +512,30 @@ async function saveDescription() {
     description: editDescriptionForm.description.trim() || null
   }
 
-  const { error } = await businessStore.updateBusiness(updates)
-  if (error) {
-    showNotification({
-      message: error.message || 'Erreur lors de la mise à jour',
-      type: 'error',
-      icon: 'error',
-      timeout: 4000
-    })
+  // Create page_settings if it doesn't exist
+  if (!pageSettingsStore.pageSettings) {
+    await pageSettingsStore.createPageSettings(updates)
   } else {
-    pageForm.description = editDescriptionForm.description.trim() || ''
-    showEditDescriptionSheet.value = false
-    showNotification({
-      message: 'Description mise à jour avec succès',
-      type: 'success',
-      icon: 'check_circle',
-      timeout: 3000
-    })
+    const { error } = await pageSettingsStore.updatePageSettings(updates)
+    if (error) {
+      showNotification({
+        message: error.message || 'Erreur lors de la mise à jour',
+        type: 'error',
+        icon: 'error',
+        timeout: 4000
+      })
+      return
+    }
   }
-}
-
-async function loadPhotos() {
-  if (!businessStore.business) return
-  const photos = await businessStore.loadBusinessPhotos()
-  businessPhotos.value = photos || []
-}
-
-async function updatePage() {
-  const updates = {
-    business_name: pageForm.business_name,
-    description: pageForm.description
-  }
-
-  const { error } = await businessStore.updateBusiness(updates)
-  if (error) {
-    showNotification({
-      message: error.message || 'Erreur lors de la mise à jour',
-      type: 'error',
-      icon: 'error',
-      timeout: 4000
-    })
-  } else {
-    showNotification({
-      message: 'Page mise à jour avec succès',
-      type: 'success',
-      icon: 'check_circle',
-      timeout: 3000
-    })
-  }
+  
+  pageForm.description = editDescriptionForm.description.trim() || ''
+  showEditDescriptionSheet.value = false
+  showNotification({
+    message: 'Description mise à jour avec succès',
+    type: 'success',
+    icon: 'check_circle',
+    timeout: 3000
+  })
 }
 
 async function handleUpdateSlug() {
@@ -549,7 +554,7 @@ async function updateSlug() {
     return
   }
 
-  const { error } = await businessStore.updateBusiness({ slug: slugForm.slug })
+  const { error } = await profileStore.updateProfile({ slug: slugForm.slug })
   if (error) {
     showNotification({
       message: error.message || 'Erreur lors de la mise à jour de l\'URL',
@@ -569,28 +574,36 @@ async function updateSlug() {
 }
 
 async function togglePublicPage() {
-  const { error } = await businessStore.updateBusiness({
-    is_public_enabled: pageForm.is_public_enabled
-  })
-  if (error) {
-    // Revert toggle on error
-    pageForm.is_public_enabled = !pageForm.is_public_enabled
-    showNotification({
-      message: error.message || 'Erreur lors de la mise à jour',
-      type: 'error',
-      icon: 'error',
-      timeout: 4000
-    })
-  } else {
-    showNotification({
-      message: pageForm.is_public_enabled
-        ? 'Page publique activée'
-        : 'Page publique désactivée',
-      type: 'success',
-      icon: 'check_circle',
-      timeout: 3000
-    })
+  const updates = {
+    is_published: pageForm.is_published
   }
+
+  // Create page_settings if it doesn't exist
+  if (!pageSettingsStore.pageSettings) {
+    await pageSettingsStore.createPageSettings(updates)
+  } else {
+    const { error } = await pageSettingsStore.updatePageSettings(updates)
+    if (error) {
+      // Revert toggle on error
+      pageForm.is_published = !pageForm.is_published
+      showNotification({
+        message: error.message || 'Erreur lors de la mise à jour',
+        type: 'error',
+        icon: 'error',
+        timeout: 4000
+      })
+      return
+    }
+  }
+  
+  showNotification({
+    message: pageForm.is_published
+      ? 'Page publique activée'
+      : 'Page publique désactivée',
+    type: 'success',
+    icon: 'check_circle',
+    timeout: 3000
+  })
 }
 
 function copyUrl() {
@@ -612,7 +625,7 @@ function copyUrl() {
 }
 
 function openPublicPage() {
-  if (businessStore.business && pageForm.is_public_enabled) {
+  if (profileStore.profile && pageForm.is_published) {
     window.open(publicUrl.value, '_blank')
   }
 }
@@ -697,15 +710,24 @@ async function handlePhotoUpload(file) {
     const result = await uploadPhotoImage(file)
     console.log('✅ Photo upload result:', result)
     
-    // Add photo to business_photos table
-    const { data, error } = await businessStore.addBusinessPhoto(result.url)
+    // Add photo to page_settings.photos array
+    const currentPhotos = pageSettingsStore.pageSettings?.photos || []
+    const newPhotos = [...currentPhotos, result.url]
     
-    if (error) {
-      throw error
+    const updates = { photos: newPhotos }
+    
+    // Create page_settings if it doesn't exist
+    if (!pageSettingsStore.pageSettings) {
+      await pageSettingsStore.createPageSettings(updates)
+    } else {
+      const { error } = await pageSettingsStore.updatePageSettings(updates)
+      if (error) {
+        throw error
+      }
     }
     
-    // Reload photos to get updated list
-    await loadPhotos()
+    // Reload page data to get updated photos
+    await loadPageData()
     
     photoFile.value = null
     
@@ -726,14 +748,18 @@ async function handlePhotoUpload(file) {
   }
 }
 
-async function removePhoto(photoId) {
+async function removePhoto(photoIndex) {
   try {
     // Get photo URL before deletion
-    const photo = businessPhotos.value.find(p => p.id === photoId)
+    const photo = businessPhotos.value[photoIndex]
     if (!photo) return
 
-    // Delete from database (this will also update cover_photo_url if needed)
-    const { error } = await businessStore.deleteBusinessPhoto(photoId)
+    // Remove from photos array
+    const currentPhotos = pageSettingsStore.pageSettings?.photos || []
+    const newPhotos = currentPhotos.filter((_, index) => index !== photoIndex)
+    
+    const updates = { photos: newPhotos }
+    const { error } = await pageSettingsStore.updatePageSettings(updates)
     
     if (error) {
       throw error
@@ -744,8 +770,8 @@ async function removePhoto(photoId) {
       await deleteImage(photo.photo_url)
     }
     
-    // Reload photos
-    await loadPhotos()
+    // Reload page data
+    await loadPageData()
     
     showNotification({
       message: 'Photo supprimée',
@@ -766,11 +792,13 @@ async function removePhoto(photoId) {
 async function movePhotoUp(index) {
   if (index === 0) return
   
-  const photoIds = businessPhotos.value.map(p => p.id)
+  const currentPhotos = pageSettingsStore.pageSettings?.photos || []
   // Swap with previous
-  [photoIds[index - 1], photoIds[index]] = [photoIds[index], photoIds[index - 1]]
+  const newPhotos = [...currentPhotos]
+  [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]]
   
-  const { error } = await businessStore.reorderBusinessPhotos(photoIds)
+  const updates = { photos: newPhotos }
+  const { error } = await pageSettingsStore.updatePageSettings(updates)
   
   if (error) {
     showNotification({
@@ -780,18 +808,20 @@ async function movePhotoUp(index) {
       timeout: 4000
     })
   } else {
-    await loadPhotos()
+    await loadPageData()
   }
 }
 
 async function movePhotoDown(index) {
   if (index >= businessPhotos.value.length - 1) return
   
-  const photoIds = businessPhotos.value.map(p => p.id)
+  const currentPhotos = pageSettingsStore.pageSettings?.photos || []
   // Swap with next
-  [photoIds[index], photoIds[index + 1]] = [photoIds[index + 1], photoIds[index]]
+  const newPhotos = [...currentPhotos]
+  [newPhotos[index], newPhotos[index + 1]] = [newPhotos[index + 1], newPhotos[index]]
   
-  const { error } = await businessStore.reorderBusinessPhotos(photoIds)
+  const updates = { photos: newPhotos }
+  const { error } = await pageSettingsStore.updatePageSettings(updates)
   
   if (error) {
     showNotification({
@@ -801,7 +831,7 @@ async function movePhotoDown(index) {
       timeout: 4000
     })
   } else {
-    await loadPhotos()
+    await loadPageData()
   }
 }
 </script>

@@ -40,16 +40,29 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useBusinessStore } from '../stores/business'
+import { useProfileStore } from '../stores/profile'
+import { usePageSettingsStore } from '../stores/pageSettings'
 import { useNotifications } from '../composables/useNotifications'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
-const businessStore = useBusinessStore()
+const profileStore = useProfileStore()
+const pageSettingsStore = usePageSettingsStore()
 const { showNotification } = useNotifications()
 
-const businessName = computed(() => businessStore.business?.business_name || 'Vazy')
+// Load profile and page settings on mount
+import { onMounted } from 'vue'
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    await profileStore.loadProfile()
+    if (profileStore.profile) {
+      await pageSettingsStore.loadPageSettings()
+    }
+  }
+})
+
+const businessName = computed(() => pageSettingsStore.pageSettings?.title || profileStore.profile?.name || 'Vazy')
 
 // Determine active tab based on current route
 const activeTab = computed(() => {

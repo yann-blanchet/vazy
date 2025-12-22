@@ -25,10 +25,10 @@
           </div>
 
           <q-select 
-            v-model="serviceForm.category_id" 
+            v-model="serviceForm.category" 
             :options="categoryOptions" 
-            option-value="id" 
-            option-label="name"
+            option-value="value" 
+            option-label="label"
             emit-value 
             map-options 
             label="Catégorie" 
@@ -38,7 +38,7 @@
             use-input
             input-debounce="0"
             new-value-mode="add"
-            @new-value="createCategoryFromSelect">
+            @new-value="(val, done) => done(val, 'add')">
             <template v-slot:no-option>
               <q-item>
                 <q-item-section class="text-grey">
@@ -64,13 +64,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useServicesStore } from '../../stores/services'
-import { useCategoriesStore } from '../../stores/categories'
 import { useNotifications } from '../../composables/useNotifications'
 
 const router = useRouter()
 const route = useRoute()
 const servicesStore = useServicesStore()
-const categoriesStore = useCategoriesStore()
 const { showNotification } = useNotifications()
 
 const serviceFormRef = ref(null)
@@ -83,7 +81,7 @@ const serviceForm = reactive({
   duration: 30,
   price: 0,
   visible: true,
-  category_id: null
+  category: ''
 })
 
 // Helper function for notifications
@@ -95,19 +93,19 @@ function notify(options) {
   })
 }
 
-// Category options for service select
+// Get unique categories from existing services
 const categoryOptions = computed(() => {
-  return categoriesStore.categories.map(cat => ({
-    id: cat.id,
-    name: cat.name
-  }))
+  const categories = new Set()
+  servicesStore.services.forEach(service => {
+    if (service.category && service.category.trim() !== '') {
+      categories.add(service.category.trim())
+    }
+  })
+  return Array.from(categories).sort().map(cat => ({ label: cat, value: cat }))
 })
 
 onMounted(async () => {
-  await Promise.all([
-    categoriesStore.loadCategories(),
-    servicesStore.loadServices()
-  ])
+  await servicesStore.loadServices()
   
   // Si on édite, charger les données du service
   if (isEdit.value && serviceId.value) {
@@ -145,68 +143,8 @@ function populateForm(service) {
     duration: service.duration || 30,
     price: service.price || 0,
     visible: service.visible !== undefined ? service.visible : true,
-    category_id: service.category_id || null
+    category: service.category || ''
   })
-}
-
-async function createCategoryFromSelect(val, done) {
-  if (!val || val.trim() === '') {
-    done()
-    return
-  }
-
-  // Check if category already exists
-  const existingCategory = categoriesStore.categories.find(
-    cat => cat.name.toLowerCase() === val.trim().toLowerCase()
-  )
-
-  if (existingCategory) {
-    // If exists, select it
-    serviceForm.category_id = existingCategory.id
-    done()
-    return
-  }
-
-  // Create new category
-  try {
-    const result = await categoriesStore.createCategory({
-      name: val.trim()
-    })
-
-    if (result.error) {
-      notify({
-        type: 'negative',
-        message: result.error.message || 'Erreur lors de la création de la catégorie'
-      })
-      done()
-      return
-    }
-
-    // Wait for loading to finish
-    while (categoriesStore.loading) {
-      await new Promise(resolve => setTimeout(resolve, 50))
-    }
-
-    // Select the newly created category
-    if (result.data) {
-      serviceForm.category_id = result.data.id
-      notify({
-        type: 'positive',
-        message: 'Catégorie créée'
-      })
-      // Return the new option for the select
-      done({ id: result.data.id, name: result.data.name }, 'add')
-    } else {
-      done()
-    }
-  } catch (error) {
-    console.error('Create category error:', error)
-    notify({
-      type: 'negative',
-      message: 'Erreur lors de la création de la catégorie'
-    })
-    done()
-  }
 }
 
 function goBack() {
@@ -229,7 +167,7 @@ async function saveService() {
       duration: serviceForm.duration,
       price: serviceForm.price,
       visible: serviceForm.visible,
-      category_id: serviceForm.category_id || null
+      category: serviceForm.category?.trim() || null
     }
 
     if (isEdit.value && serviceId.value) {

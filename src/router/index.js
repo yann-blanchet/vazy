@@ -130,15 +130,19 @@ let authInitialized = false
 router.beforeEach(async (to, from, next) => {
   // Dynamic imports to avoid circular dependencies
   const authModule = await import('../stores/auth')
-  const businessModule = await import('../stores/business')
+  const profileModule = await import('../stores/profile')
 
   const authStore = authModule.useAuthStore()
-  const businessStore = businessModule.useBusinessStore()
+  const profileStore = profileModule.useProfileStore()
 
   // Initialize auth on first navigation if not already done
   if (!authInitialized) {
     authInitialized = true
     await authStore.init()
+    // Load profile if authenticated
+    if (authStore.isAuthenticated) {
+      await profileStore.loadProfile()
+    }
   }
 
   // Wait if initialization is in progress
@@ -154,16 +158,16 @@ router.beforeEach(async (to, from, next) => {
   }
 
   const isAuthenticated = authStore.isAuthenticated
-  const hasBusiness = businessStore.hasBusiness
+  const hasProfile = profileStore.hasProfile
 
   // If user is authenticated and on home page, redirect to appointments or onboarding
   if (to.name === 'home' && isAuthenticated) {
-    return next(hasBusiness ? { path: '/appointments' } : { path: '/onboarding' })
+    return next(hasProfile ? { path: '/appointments' } : { path: '/onboarding' })
   }
 
   // Guest routes - redirect if already authenticated
   if (to.meta.requiresGuest && isAuthenticated) {
-    return next(hasBusiness ? { path: '/appointments' } : { path: '/onboarding' })
+    return next(hasProfile ? { path: '/appointments' } : { path: '/onboarding' })
   }
 
   // Auth required - redirect to login if not authenticated
@@ -171,13 +175,13 @@ router.beforeEach(async (to, from, next) => {
     return next({ path: '/login', query: { redirect: to.fullPath } })
   }
 
-  // Business required - redirect to onboarding if no business
-  if (to.meta.requiresBusiness && !hasBusiness) {
+  // Business required (now Profile required) - redirect to onboarding if no profile
+  if (to.meta.requiresBusiness && !hasProfile) {
     return next({ path: '/onboarding' })
   }
 
-  // No business required (onboarding) - redirect to appointments if business exists
-  if (to.meta.requiresNoBusiness && hasBusiness) {
+  // No business required (onboarding) - redirect to appointments if profile exists
+  if (to.meta.requiresNoBusiness && hasProfile) {
     return next({ path: '/appointments' })
   }
 

@@ -79,7 +79,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAppointmentsStore } from '../../stores/appointments'
 import { useServicesStore } from '../../stores/services'
-import { useBusinessStore } from '../../stores/business'
+import { useProfileStore } from '../../stores/profile'
 import { useNotifications } from '../../composables/useNotifications'
 import dayjs from 'dayjs'
 
@@ -87,7 +87,7 @@ const router = useRouter()
 const route = useRoute()
 const appointmentsStore = useAppointmentsStore()
 const servicesStore = useServicesStore()
-const businessStore = useBusinessStore()
+const profileStore = useProfileStore()
 const { showNotification } = useNotifications()
 
 const appointmentFormRef = ref(null)
@@ -206,10 +206,10 @@ async function saveAppointment() {
   }
 
   try {
-    if (!businessStore.business) {
+    if (!profileStore.profile) {
       showNotification({
         type: 'error',
-        message: 'Aucun commerce trouvé'
+        message: 'Aucun profil trouvé'
       })
       return
     }
@@ -259,7 +259,7 @@ async function saveAppointment() {
     } else {
       // Create new appointment
       const appointmentData = {
-        business_id: businessStore.business.id,
+        business_id: profileStore.profile.id, // For backward compatibility
         service_id: appointmentForm.service_id,
         customer_name: appointmentForm.customer_name,
         customer_email: appointmentForm.customer_email,

@@ -7,12 +7,11 @@
     <q-stepper v-model="step" color="primary" animated flat bordered>
       <q-step :name="1" title="Informations de base" :done="step > 1">
         <q-form @submit="nextStep" class="q-gutter-sm q-mt-sm">
-          <q-input v-model="form.business_name" label="Nom du commerce *" :rules="[val => !!val || 'Requis']"
+          <q-input v-model="form.name" label="Nom *" :rules="[val => !!val || 'Requis']"
             outlined dense />
 
-          <q-input v-model="form.address" label="Adresse *" :rules="[val => !!val || 'Requis']" outlined dense />
-
-          <q-input v-model="form.city" label="Ville *" :rules="[val => !!val || 'Requis']" outlined dense />
+          <q-select v-model="form.profile_type" :options="profileTypeOptions" label="Type de profil *"
+            :rules="[val => !!val || 'Requis']" outlined dense />
 
           <q-input v-model="form.slug" label="URL publique *"
             :rules="[
@@ -25,66 +24,9 @@
           </q-input>
 
           <div class="row justify-end q-mt-md">
-            <q-btn type="submit" label="Suivant" color="primary" flat dense />
+            <q-btn type="submit" label="Créer mon profil" color="primary" :loading="profileStore.loading" flat dense />
           </div>
         </q-form>
-      </q-step>
-
-      <q-step :name="2" title="Horaires d'ouverture" :done="step > 2">
-        <div class="q-gutter-sm q-mt-sm">
-          <div v-for="day in days" :key="day.value" class="row items-center q-mb-sm">
-            <div class="col-12 col-sm-3">
-              <q-checkbox v-model="form.opening_hours[day.value].open" :label="day.label" dense />
-            </div>
-            <div v-if="form.opening_hours[day.value].open" class="col-12 col-sm-9 row q-gutter-xs">
-              <q-input v-model="form.opening_hours[day.value].start" label="Ouverture" mask="##:##" placeholder="09:00"
-                outlined dense style="max-width: 110px"
-                :rules="[val => !val || /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(val) || 'Format HH:mm']" />
-              <span class="self-center text-grey-7">-</span>
-              <q-input v-model="form.opening_hours[day.value].end" label="Fermeture" mask="##:##" placeholder="18:00"
-                outlined dense style="max-width: 110px"
-                :rules="[val => !val || /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(val) || 'Format HH:mm']" />
-            </div>
-          </div>
-
-          <div class="row justify-between q-mt-md">
-            <q-btn flat label="Précédent" @click="step = 1" dense />
-            <q-btn label="Suivant" color="primary" @click="nextStep" flat dense />
-          </div>
-        </div>
-      </q-step>
-
-      <q-step :name="3" title="Confirmation">
-        <div class="q-mt-sm">
-          <div class="text-subtitle1 q-mb-sm">Récapitulatif</div>
-
-          <q-list bordered flat>
-            <q-item>
-              <q-item-section>
-                <q-item-label class="text-caption text-grey-7">Nom</q-item-label>
-                <q-item-label>{{ form.business_name }}</q-item-label>
-              </q-item-section>
-            </q-item>
-            <q-item>
-              <q-item-section>
-                <q-item-label class="text-caption text-grey-7">Adresse</q-item-label>
-                <q-item-label>{{ form.address }}, {{ form.city }}</q-item-label>
-              </q-item-section>
-            </q-item>
-            <q-item>
-              <q-item-section>
-                <q-item-label class="text-caption text-grey-7">URL</q-item-label>
-                <q-item-label>{{ baseUrl }}/{{ form.slug }}</q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <div class="row justify-between q-mt-md">
-            <q-btn flat label="Précédent" @click="step = 2" dense />
-            <q-btn label="Créer mon commerce" color="primary" :loading="businessStore.loading" @click="createBusiness"
-              flat dense />
-          </div>
-        </div>
       </q-step>
     </q-stepper>
   </q-page>
@@ -94,48 +36,30 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
-import { useBusinessStore } from '../../stores/business'
+import { useProfileStore } from '../../stores/profile'
+import { usePageSettingsStore } from '../../stores/pageSettings'
 import { useNotifications } from '../../composables/useNotifications'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const businessStore = useBusinessStore()
+const profileStore = useProfileStore()
+const pageSettingsStore = usePageSettingsStore()
 const { showNotification } = useNotifications()
 
 const step = ref(1)
 const baseUrl = computed(() => window.location.origin)
 
 const form = reactive({
-  business_name: '',
-  address: '',
-  city: '',
+  name: '',
   slug: '',
-  opening_hours: {
-    monday: { open: true, start: '09:00', end: '18:00' },
-    tuesday: { open: true, start: '09:00', end: '18:00' },
-    wednesday: { open: true, start: '09:00', end: '18:00' },
-    thursday: { open: true, start: '09:00', end: '18:00' },
-    friday: { open: true, start: '09:00', end: '18:00' },
-    saturday: { open: false, start: '09:00', end: '18:00' },
-    sunday: { open: false, start: '09:00', end: '18:00' }
-  }
+  profile_type: 'tattoo'
 })
 
-const days = [
-  { label: 'Lundi', value: 'monday' },
-  { label: 'Mardi', value: 'tuesday' },
-  { label: 'Mercredi', value: 'wednesday' },
-  { label: 'Jeudi', value: 'thursday' },
-  { label: 'Vendredi', value: 'friday' },
-  { label: 'Samedi', value: 'saturday' },
-  { label: 'Dimanche', value: 'sunday' }
+const profileTypeOptions = [
+  { label: 'Tatoueur', value: 'tattoo' },
+  { label: 'Barbier', value: 'barber' },
+  { label: 'Nail Artist', value: 'nails' }
 ]
-
-function nextStep() {
-  if (step.value < 3) {
-    step.value++
-  }
-}
 
 // Vérifier l'authentification au montage du composant
 onMounted(async () => {
@@ -148,26 +72,29 @@ onMounted(async () => {
   if (!authStore.isAuthenticated) {
     showNotification({
       type: 'error',
-      message: 'Vous devez être connecté pour créer un commerce.',
+      message: 'Vous devez être connecté pour créer un profil.',
       timeout: 3000
     })
     router.push('/login')
   }
 })
 
-async function createBusiness() {
+function nextStep() {
+  if (step.value === 1) {
+    createProfile()
+  }
+}
+
+async function createProfile() {
   try {
-    const { error } = await businessStore.createBusiness(form)
+    const { error } = await profileStore.createProfile(form)
 
     if (error) {
-      console.error('Create business error:', error)
-      // Message d'erreur plus détaillé
-      let errorMessage = error.message || 'Erreur lors de la création du commerce'
+      console.error('Create profile error:', error)
+      let errorMessage = error.message || 'Erreur lors de la création du profil'
       
-      // Si l'erreur indique un problème d'authentification, suggérer de se reconnecter
       if (error.message && (error.message.includes('authenticated') || error.message.includes('connecté'))) {
         errorMessage = 'Vous n\'êtes pas connecté. Veuillez vous reconnecter.'
-        // Rediriger vers la page de connexion après un court délai
         setTimeout(() => {
           router.push('/login')
         }, 2000)
@@ -179,17 +106,23 @@ async function createBusiness() {
         timeout: 5000
       })
     } else {
+      // Create default page_settings
+      await pageSettingsStore.createPageSettings({
+        title: form.name,
+        is_published: true
+      })
+      
       showNotification({
         type: 'success',
-        message: 'Commerce créé avec succès !'
+        message: 'Profil créé avec succès !'
       })
       router.push('/appointments')
     }
   } catch (err) {
-    console.error('Create business exception:', err)
+    console.error('Create profile exception:', err)
     showNotification({
       type: 'error',
-      message: err.message || 'Une erreur est survenue lors de la création du commerce'
+      message: err.message || 'Une erreur est survenue lors de la création du profil'
     })
   }
 }

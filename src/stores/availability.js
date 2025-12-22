@@ -1,29 +1,35 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../services/supabase'
-import { useBusinessStore } from './business'
+import { useProfileStore } from './profile'
 
 export const useAvailabilityStore = defineStore('availability', () => {
   const blockedDates = ref([])
   const loading = ref(false)
-  const businessStore = useBusinessStore()
+  const profileStore = useProfileStore()
 
   async function blockDate(blockData) {
     loading.value = true
     try {
-      if (!businessStore.business) {
-        throw new Error('Aucun commerce trouvé')
+      if (!profileStore.profile) {
+        throw new Error('Aucun profil trouvé')
       }
 
+      // Convert date/time to timestamptz for calendar_events
+      const startAt = blockData.start_time 
+        ? `${blockData.date}T${blockData.start_time}:00`
+        : `${blockData.date}T00:00:00`
+      const endAt = blockData.end_time
+        ? `${blockData.date}T${blockData.end_time}:00`
+        : `${blockData.date}T23:59:59`
+
       const { data, error } = await supabase
-        .from('availability')
+        .from('calendar_events')
         .insert({
-          business_id: businessStore.business.id,
-          date: blockData.date,
-          start_time: blockData.start_time || null,
-          end_time: blockData.end_time || null,
-          is_available: false,
-          reason: blockData.reason || null
+          profile_id: profileStore.profile.id,
+          type: 'blocked',
+          start_at: startAt,
+          end_at: endAt
         })
         .select()
         .single()
@@ -46,22 +52,22 @@ export const useAvailabilityStore = defineStore('availability', () => {
   async function loadBlockedDates(filters = {}) {
     loading.value = true
     try {
-      if (!businessStore.business) return
+      if (!profileStore.profile) return
 
       let query = supabase
-        .from('availability')
+        .from('calendar_events')
         .select('*')
-        .eq('business_id', businessStore.business.id)
-        .eq('is_available', false)
+        .eq('profile_id', profileStore.profile.id)
+        .eq('type', 'blocked')
 
       if (filters.startDate) {
-        query = query.gte('date', filters.startDate)
+        query = query.gte('start_at', filters.startDate)
       }
       if (filters.endDate) {
-        query = query.lte('date', filters.endDate)
+        query = query.lte('end_at', filters.endDate)
       }
 
-      query = query.order('date', { ascending: true })
+      query = query.order('start_at', { ascending: true })
 
       const { data, error } = await query
 
@@ -84,9 +90,10 @@ export const useAvailabilityStore = defineStore('availability', () => {
     loading.value = true
     try {
       const { error } = await supabase
-        .from('availability')
+        .from('calendar_events')
         .delete()
         .eq('id', id)
+        .eq('type', 'blocked')
 
       if (error) throw error
 

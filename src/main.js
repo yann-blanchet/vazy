@@ -37,19 +37,19 @@ app.use(router)
 
 // Set up auth state listener (will be initialized in router guard)
 import('./stores/auth').then(({ useAuthStore }) => {
-  import('./stores/business').then(({ useBusinessStore }) => {
+  import('./stores/profile').then(({ useProfileStore }) => {
     const authStore = useAuthStore()
-    const businessStore = useBusinessStore()
+    const profileStore = useProfileStore()
 
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user) {
           authStore.user = session.user
-          await businessStore.loadBusiness()
+          await profileStore.loadProfile()
         }
       } else if (event === 'SIGNED_OUT') {
         authStore.user = null
-        businessStore.clearBusiness()
+        profileStore.clearProfile()
       }
     })
   })

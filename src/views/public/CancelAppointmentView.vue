@@ -76,13 +76,22 @@ onMounted(async () => {
 async function loadAppointment(token) {
   try {
     const { data, error } = await supabase
-      .from('appointments')
+      .from('calendar_events')
       .select('*')
       .eq('cancellation_token', token)
+      .eq('type', 'appointment')
       .single()
 
     if (data) {
-      appointment.value = data
+      // Transform calendar_events to appointments format for compatibility
+      appointment.value = {
+        id: data.id,
+        service_name: data.service_name,
+        appointment_date: data.start_at,
+        customer_name: data.client_name,
+        status: data.status,
+        cancellation_token: data.cancellation_token
+      }
     }
   } catch (error) {
     console.error('Load appointment error:', error)
@@ -96,9 +105,10 @@ async function cancelAppointment() {
   try {
     // Use cancellation_token for security (no auth required)
     const { error } = await supabase
-      .from('appointments')
+      .from('calendar_events')
       .update({ status: 'cancelled' })
       .eq('cancellation_token', appointment.value.cancellation_token)
+      .eq('type', 'appointment')
 
     if (error) throw error
 

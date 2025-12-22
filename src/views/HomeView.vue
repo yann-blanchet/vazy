@@ -15,9 +15,19 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useBusinessStore } from '../stores/business'
+import { computed, onMounted } from 'vue'
+import { useProfileStore } from '../stores/profile'
+import { usePageSettingsStore } from '../stores/pageSettings'
 
-const businessStore = useBusinessStore()
-const businessName = computed(() => businessStore.business?.business_name || 'Vazy')
+const profileStore = useProfileStore()
+const pageSettingsStore = usePageSettingsStore()
+
+onMounted(async () => {
+  await profileStore.loadProfile()
+  if (profileStore.profile) {
+    await pageSettingsStore.loadPageSettings()
+  }
+})
+
+const businessName = computed(() => pageSettingsStore.pageSettings?.title || profileStore.profile?.name || 'Vazy')
 </script>

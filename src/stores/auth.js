@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../services/supabase'
-import { useBusinessStore } from './business'
+import { useProfileStore } from './profile'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const loading = ref(false)
-  const businessStore = useBusinessStore()
+  const profileStore = useProfileStore()
 
   const isAuthenticated = computed(() => !!user.value)
   const isBusinessOwner = computed(() => !!user.value)
@@ -17,7 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         user.value = session.user
-        await businessStore.loadBusiness()
+        await profileStore.loadProfile()
       }
     } catch (error) {
       console.error('Auth init error:', error)
@@ -47,9 +47,9 @@ export const useAuthStore = defineStore('auth', () => {
       if (data?.user) {
         user.value = data.user
         
-        // Si une session est disponible (email confirmation désactivée), charger le business
+        // Si une session est disponible (email confirmation désactivée), charger le profile
         if (data.session) {
-          await businessStore.loadBusiness()
+          await profileStore.loadProfile()
         }
       }
       
@@ -78,7 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
       if (data?.user) {
         user.value = data.user
-        await businessStore.loadBusiness()
+        await profileStore.loadProfile()
       }
       return { data, error: null }
     } catch (error) {
@@ -150,7 +150,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       user.value = null
-      businessStore.clearBusiness()
+      profileStore.clearProfile()
     } catch (error) {
       throw error
     } finally {

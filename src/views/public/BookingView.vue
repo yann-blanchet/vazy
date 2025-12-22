@@ -266,7 +266,6 @@ const { showNotification } = useNotifications()
 
 const business = ref(null)
 const services = ref([])
-const categories = ref([])
 const loading = ref(true)
 const step = ref(1)
 const selectedService = ref(null)
@@ -301,7 +300,7 @@ const visibleServices = computed(() => {
   return services.value.filter(s => s.visible)
 })
 
-// Group services by category
+// Group services by category (TEXT field)
 const groupedServices = computed(() => {
   if (!visibleServices.value || visibleServices.value.length === 0) {
     return []
@@ -309,42 +308,24 @@ const groupedServices = computed(() => {
 
   const groups = {}
 
-  // First, add all categories
-  categories.value.forEach(category => {
-    groups[category.id] = {
-      id: category.id,
-      name: category.name,
-      display_order: category.display_order || 0,
-      services: []
-    }
-  })
-
-  // Add services to their categories
+  // Group services by category
   visibleServices.value.forEach(service => {
-    const categoryId = service.category_id
-    if (categoryId && groups[categoryId]) {
-      groups[categoryId].services.push(service)
-    } else {
-      // Services without category
-      if (!groups['no-category']) {
-        groups['no-category'] = {
-          id: null,
-          name: null,
-          display_order: 9999,
-          services: []
-        }
+    const categoryName = service.category || null
+    const key = categoryName || 'no-category'
+    
+    if (!groups[key]) {
+      groups[key] = {
+        name: categoryName,
+        services: []
       }
-      groups['no-category'].services.push(service)
     }
+    groups[key].services.push(service)
   })
 
-  // Convert to array and sort by display_order, then name
+  // Convert to array and sort by category name
   const result = Object.values(groups)
     .filter(group => group.services.length > 0)
     .sort((a, b) => {
-      if (a.display_order !== b.display_order) {
-        return a.display_order - b.display_order
-      }
       if (!a.name && b.name) return 1
       if (a.name && !b.name) return -1
       return (a.name || '').localeCompare(b.name || '')
@@ -360,18 +341,39 @@ onMounted(async () => {
 
 async function loadBusiness(slug) {
   try {
-    const { data, error } = await supabase
-      .from('businesses')
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
       .select('*')
       .eq('slug', slug)
+      .eq('is_active', true)
       .single()
 
-    if (data) {
-      business.value = data
-      await Promise.all([
-        loadServices(data.id),
-        loadCategories(data.id)
-      ])
+    if (profileData) {
+      // Load page_settings for opening hours (if stored there) or use default
+      const { data: pageData } = await supabase
+        .from('page_settings')
+        .select('*')
+        .eq('profile_id', profileData.id)
+        .eq('is_published', true)
+        .single()
+
+      // For now, use default opening hours (can be stored in page_settings later)
+      business.value = {
+        ...profileData,
+        business_name: pageData?.title || profileData.name,
+        description: pageData?.description || null,
+        opening_hours: {
+          monday: { open: true, start: '09:00', end: '18:00' },
+          tuesday: { open: true, start: '09:00', end: '18:00' },
+          wednesday: { open: true, start: '09:00', end: '18:00' },
+          thursday: { open: true, start: '09:00', end: '18:00' },
+          friday: { open: true, start: '09:00', end: '18:00' },
+          saturday: { open: false, start: '09:00', end: '18:00' },
+          sunday: { open: false, start: '09:00', end: '18:00' }
+        }
+      }
+
+      await loadServices(profileData.id)
     }
   } catch (error) {
     console.error('Load business error:', error)
@@ -380,38 +382,32 @@ async function loadBusiness(slug) {
   }
 }
 
-async function loadServices(businessId) {
+async function loadServices(profileId) {
   try {
     const { data, error } = await supabase
       .from('services')
       .select('*')
-      .eq('business_id', businessId)
-      .eq('visible', true)
+      .eq('profile_id', profileId)
+      .eq('is_active', true)
+      .order('position', { ascending: true })
 
     if (data) {
-      services.value = data
+      // Transform for compatibility
+      services.value = data.map(service => ({
+        ...service,
+        price: service.price_cents / 100,
+        duration: service.duration_minutes,
+        visible: service.is_active,
+        business_id: service.profile_id
+      }))
     }
   } catch (error) {
     console.error('Load services error:', error)
   }
 }
 
-async function loadCategories(businessId) {
-  try {
-    const { data, error } = await supabase
-      .from('service_categories')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('display_order', { ascending: true })
-      .order('name', { ascending: true })
-
-    if (data) {
-      categories.value = data
-    }
-  } catch (error) {
-    console.error('Load categories error:', error)
-  }
-}
+// Categories are now directly in services.category (TEXT field)
+// No need for separate loadCategories function
 
 function selectService(service) {
   selectedService.value = service
@@ -562,7 +558,7 @@ async function confirmBooking() {
     const appointmentDate = dayjs(`${selectedDate.value} ${selectedTime.value}`).toISOString()
 
     const { data, error } = await appointmentsStore.createAppointment({
-      business_id: business.value.id,
+      business_id: business.value.id, // For backward compatibility
       service_id: selectedService.value.id,
       customer_name: customerForm.value.name,
       customer_email: customerForm.value.email,

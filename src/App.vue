@@ -10,15 +10,24 @@
 </template>
 
 <script setup>
-import { watch, computed } from 'vue'
+import { watch, computed, onMounted } from 'vue'
 import { useNotifications } from './composables/useNotifications'
-import { useBusinessStore } from './stores/business'
+import { useProfileStore } from './stores/profile'
+import { usePageSettingsStore } from './stores/pageSettings'
 import ModernNotification from './components/ModernNotification.vue'
 
 const { notifications, removeNotification } = useNotifications()
-const businessStore = useBusinessStore()
+const profileStore = useProfileStore()
+const pageSettingsStore = usePageSettingsStore()
 
-const businessName = computed(() => businessStore.business?.business_name || 'Vazy')
+onMounted(async () => {
+  await profileStore.loadProfile()
+  if (profileStore.profile) {
+    await pageSettingsStore.loadPageSettings()
+  }
+})
+
+const businessName = computed(() => pageSettingsStore.pageSettings?.title || profileStore.profile?.name || 'Vazy')
 
 // Update document title when business name changes
 watch(businessName, (newName) => {

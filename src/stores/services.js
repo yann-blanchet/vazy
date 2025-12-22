@@ -2,70 +2,60 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../services/supabase'
 import db from '../services/db'
-import { useBusinessStore } from './business'
+import { useProfileStore } from './profile'
 
 export const useServicesStore = defineStore('services', () => {
   const services = ref([])
   const loading = ref(false)
-  const businessStore = useBusinessStore()
+  const profileStore = useProfileStore()
 
   async function loadServices() {
     loading.value = true
     try {
-      if (!businessStore.business) return
+      if (!profileStore.profile) return
 
-      // Try Supabase first - join with categories for ordering
+      // Try Supabase first
       const { data, error } = await supabase
         .from('services')
-        .select(`
-          *,
-          service_categories (
-            id,
-            name,
-            display_order
-          )
-        `)
-        .eq('business_id', businessStore.business.id)
+        .select('*')
+        .eq('profile_id', profileStore.profile.id)
+        .eq('is_active', true)
+        .order('position', { ascending: true })
         .order('created_at', { ascending: false })
 
       if (data) {
-        // Flatten the data structure
-        const flattened = data.map(service => ({
+        // Transform to include price and duration for compatibility
+        const transformed = data.map(service => ({
           ...service,
-          category_name: service.service_categories?.name || null,
-          category_display_order: service.service_categories?.display_order || null
+          price: service.price_cents / 100, // Convert cents to decimal
+          duration: service.duration_minutes,
+          visible: service.is_active,
+          business_id: service.profile_id // For backward compatibility
         }))
-        // Remove nested category object
-        flattened.forEach(service => {
-          delete service.service_categories
-        })
-
-        services.value = flattened
-        await db.services.bulkPut(flattened)
+        
+        services.value = transformed
+        await db.services.bulkPut(data) // Store original format
       } else {
         // Try local DB
         const local = await db.services
-          .where('business_id')
-          .equals(businessStore.business.id)
+          .where('profile_id')
+          .equals(profileStore.profile.id)
+          .and(service => service.is_active === true)
           .toArray()
-        services.value = local
+        
+        // Transform for compatibility
+        const transformed = local.map(service => ({
+          ...service,
+          price: service.price_cents / 100,
+          duration: service.duration_minutes,
+          visible: service.is_active,
+          business_id: service.profile_id
+        }))
+        
+        services.value = transformed
       }
     } catch (error) {
       console.error('Load services error:', error)
-      // Fallback: try without join
-      try {
-        const { data } = await supabase
-          .from('services')
-          .select('*')
-          .eq('business_id', businessStore.business.id)
-          .order('created_at', { ascending: false })
-        if (data) {
-          services.value = data
-          await db.services.bulkPut(data)
-        }
-      } catch (fallbackError) {
-        console.error('Fallback load error:', fallbackError)
-      }
     } finally {
       loading.value = false
     }
@@ -74,19 +64,37 @@ export const useServicesStore = defineStore('services', () => {
   async function createService(serviceData) {
     loading.value = true
     try {
-      if (!businessStore.business) throw new Error('No business loaded')
+      if (!profileStore.profile) throw new Error('No profile loaded')
+
+      // Get max position for ordering
+      const maxPosition = services.value.length > 0
+        ? Math.max(...services.value.map(s => s.position || 0))
+        : -1
 
       const newService = {
-        ...serviceData,
-        business_id: businessStore.business.id,
         id: crypto.randomUUID(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        profile_id: profileStore.profile.id,
+        category: serviceData.category || null,
+        name: serviceData.name,
+        duration_minutes: serviceData.duration || serviceData.duration_minutes || 60,
+        price_cents: Math.round((serviceData.price || 0) * 100), // Convert to cents
+        is_active: serviceData.visible !== false,
+        position: maxPosition + 1,
+        created_at: new Date().toISOString()
       }
 
       // Store locally first
       await db.services.add(newService)
-      services.value.push(newService)
+      
+      // Add to services array with transformation
+      const transformed = {
+        ...newService,
+        price: newService.price_cents / 100,
+        duration: newService.duration_minutes,
+        visible: newService.is_active,
+        business_id: newService.profile_id
+      }
+      services.value.push(transformed)
 
       // Sync to Supabase
       try {
@@ -121,28 +129,49 @@ export const useServicesStore = defineStore('services', () => {
       const index = services.value.findIndex(s => s.id === serviceId)
       if (index === -1) throw new Error('Service not found')
 
-      const updated = {
-        ...services.value[index],
-        ...updates,
-        updated_at: new Date().toISOString()
-      }
+      // Transform updates to new format
+      const eventUpdates = {}
+      if (updates.name !== undefined) eventUpdates.name = updates.name
+      if (updates.category !== undefined) eventUpdates.category = updates.category || null
+      if (updates.duration !== undefined) eventUpdates.duration_minutes = updates.duration
+      if (updates.price !== undefined) eventUpdates.price_cents = Math.round(updates.price * 100)
+      if (updates.visible !== undefined) eventUpdates.is_active = updates.visible
 
       // Update locally
-      await db.services.update(serviceId, updated)
+      const localService = await db.services.get(serviceId)
+      if (localService) {
+        const updatedLocal = { ...localService, ...eventUpdates }
+        await db.services.update(serviceId, updatedLocal)
+      }
+
+      // Update transformed services array
+      const updated = {
+        ...services.value[index],
+        ...updates
+      }
       services.value[index] = updated
 
       // Sync to Supabase
       try {
         const { data, error } = await supabase
           .from('services')
-          .update(updates)
+          .update(eventUpdates)
           .eq('id', serviceId)
           .select()
           .single()
 
         if (data) {
-          services.value[index] = data
           await db.services.update(serviceId, data)
+          
+          // Update transformed array
+          const transformed = {
+            ...data,
+            price: data.price_cents / 100,
+            duration: data.duration_minutes,
+            visible: data.is_active,
+            business_id: data.profile_id
+          }
+          services.value[index] = transformed
         }
       } catch (error) {
         console.error('Sync error:', error)
