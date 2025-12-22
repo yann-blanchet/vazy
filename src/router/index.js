@@ -30,12 +30,6 @@ const routes = [
         meta: { requiresAuth: true, requiresNoBusiness: true }
       },
       {
-        path: 'calendar',
-        name: 'calendar',
-        component: () => import('../views/calendar/CalendarView.vue'),
-        meta: { requiresAuth: true, requiresBusiness: true }
-      },
-      {
         path: 'services',
         name: 'services',
         component: () => import('../views/services/ServicesView.vue'),
