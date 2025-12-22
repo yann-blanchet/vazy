@@ -180,7 +180,7 @@ async function createBusiness() {
         type: 'success',
         message: 'Commerce créé avec succès !'
       })
-      router.push('/dashboard')
+      router.push('/appointments')
     }
   } catch (err) {
     console.error('Create business exception:', err)

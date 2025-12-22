@@ -53,7 +53,7 @@ async function handleLogin() {
       message: error.message || 'Erreur de connexion. Vérifiez vos identifiants.'
     })
   } else {
-    const redirect = route.query.redirect || '/dashboard'
+    const redirect = route.query.redirect || '/appointments'
     router.push(redirect)
   }
 }

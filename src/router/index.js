@@ -30,12 +30,6 @@ const routes = [
         meta: { requiresAuth: true, requiresNoBusiness: true }
       },
       {
-        path: 'dashboard',
-        name: 'dashboard',
-        component: () => import('../views/dashboard/DashboardView.vue'),
-        meta: { requiresAuth: true, requiresBusiness: true }
-      },
-      {
         path: 'calendar',
         name: 'calendar',
         component: () => import('../views/calendar/CalendarView.vue'),
@@ -168,14 +162,14 @@ router.beforeEach(async (to, from, next) => {
   const isAuthenticated = authStore.isAuthenticated
   const hasBusiness = businessStore.hasBusiness
 
-  // If user is authenticated and on home page, redirect to dashboard or onboarding
+  // If user is authenticated and on home page, redirect to appointments or onboarding
   if (to.name === 'home' && isAuthenticated) {
-    return next(hasBusiness ? { path: '/dashboard' } : { path: '/onboarding' })
+    return next(hasBusiness ? { path: '/appointments' } : { path: '/onboarding' })
   }
 
   // Guest routes - redirect if already authenticated
   if (to.meta.requiresGuest && isAuthenticated) {
-    return next(hasBusiness ? { path: '/dashboard' } : { path: '/onboarding' })
+    return next(hasBusiness ? { path: '/appointments' } : { path: '/onboarding' })
   }
 
   // Auth required - redirect to login if not authenticated
@@ -188,9 +182,9 @@ router.beforeEach(async (to, from, next) => {
     return next({ path: '/onboarding' })
   }
 
-  // No business required (onboarding) - redirect to dashboard if business exists
+  // No business required (onboarding) - redirect to appointments if business exists
   if (to.meta.requiresNoBusiness && hasBusiness) {
-    return next({ path: '/dashboard' })
+    return next({ path: '/appointments' })
   }
 
   next()
