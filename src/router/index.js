@@ -100,6 +100,19 @@ const routes = [
       }
     ]
   },
+  // Photos management route (no layout header/footer)
+  {
+    path: '/page',
+    component: () => import('../layouts/SimpleLayout.vue'),
+    children: [
+      {
+        path: 'photos',
+        name: 'page-photos',
+        component: () => import('../views/page/PhotosView.vue'),
+        meta: { requiresAuth: true, requiresBusiness: true }
+      }
+    ]
+  },
   // Public routes (no auth, no layout header) - MUST come before /:slug catch-all
   {
     path: '/book/:slug',
