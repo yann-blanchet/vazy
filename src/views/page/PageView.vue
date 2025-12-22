@@ -11,49 +11,32 @@
       <!-- Page Tab -->
       <q-tab-panel name="page">
         <div class="q-gutter-md">
-          <!-- URL publique -->
+          <!-- Lien de la page -->
           <q-card>
             <q-card-section>
-              <div class="text-h6 q-mb-md">URL publique</div>
-              <q-form @submit="updateSlug" class="q-gutter-md">
-                <q-input
-                  v-model="slugForm.slug"
-                  label="URL publique *"
-                  outlined
-                  :rules="[
-                    val => !!val || 'Requis',
-                    val => /^[a-z0-9-]+$/.test(val) || 'Seulement lettres minuscules, chiffres et tirets'
-                  ]"
-                  hint="Partie de l'URL après le domaine (ex: mon-commerce)"
-                >
-                  <template v-slot:prepend>
-                    <div class="text-grey-7">{{ baseUrl }}/</div>
-                  </template>
-                </q-input>
-
-                <div class="row items-center q-mt-md">
-                  <div class="col">
-                    <div class="text-body2 text-grey-7">Lien complet :</div>
-                    <div class="text-body1 text-weight-medium">{{ publicUrl }}</div>
-                  </div>
-                  <div class="col-auto">
-                    <q-btn
-                      icon="content_copy"
-                      flat
-                      @click="copyUrl"
-                      label="Copier"
-                    />
-                  </div>
+              <div class="text-h6 q-mb-md">Lien de la page</div>
+              <div class="row items-center q-mt-md">
+                <div class="col">
+                  <div class="text-body2 text-grey-7">URL complète :</div>
+                  <div class="text-body1 text-weight-medium">{{ publicUrl || 'Non configuré' }}</div>
                 </div>
-
-                <q-btn
-                  type="submit"
-                  label="Enregistrer l'URL"
-                  color="primary"
-                  :loading="businessStore.loading"
-                  unelevated
-                />
-              </q-form>
+                <div class="col-auto q-gutter-sm">
+                  <q-btn
+                    icon="edit"
+                    flat
+                    @click="showEditUrlModal = true"
+                    label="Éditer"
+                    color="primary"
+                  />
+                  <q-btn
+                    icon="content_copy"
+                    flat
+                    @click="copyUrl"
+                    label="Copier"
+                    :disable="!publicUrl"
+                  />
+                </div>
+              </div>
             </q-card-section>
           </q-card>
 
@@ -105,171 +88,188 @@
 
       <!-- Paramètres Tab -->
       <q-tab-panel name="settings">
-        <div class="q-gutter-md">
-          <!-- Nom affiché -->
-          <q-card>
-            <q-card-section>
-              <div class="text-h6 q-mb-md">Nom affiché</div>
-              <q-form @submit="updatePage" class="q-gutter-md">
-                <q-input
-                  v-model="pageForm.business_name"
-                  label="Nom affiché *"
-                  outlined
-                  :rules="[val => !!val || 'Requis']"
-                  hint="Nom qui apparaîtra sur votre page publique"
-                />
-                <q-btn
-                  type="submit"
-                  label="Enregistrer"
-                  color="primary"
-                  :loading="businessStore.loading"
-                  unelevated
-                />
-              </q-form>
-            </q-card-section>
-          </q-card>
+        <q-card>
+          <q-card-section>
+            <q-form @submit="updatePage" class="q-gutter-md">
+              <!-- Nom affiché -->
+              <q-input
+                v-model="pageForm.business_name"
+                label="Nom affiché *"
+                outlined
+                :rules="[val => !!val || 'Requis']"
+              />
 
-          <!-- Description -->
-          <q-card>
-            <q-card-section>
-              <div class="text-h6 q-mb-md">Description</div>
-              <q-form @submit="updatePage" class="q-gutter-md">
-                <q-input
-                  v-model="pageForm.description"
-                  label="Description"
-                  type="textarea"
-                  outlined
-                  rows="4"
-                  hint="Description de votre commerce qui apparaîtra sur la page publique"
-                />
-                <q-btn
-                  type="submit"
-                  label="Enregistrer"
-                  color="primary"
-                  :loading="businessStore.loading"
-                  unelevated
-                />
-              </q-form>
-            </q-card-section>
-          </q-card>
+              <!-- Description -->
+              <q-input
+                v-model="pageForm.description"
+                label="Description"
+                type="textarea"
+                outlined
+                rows="4"
+                
+              />
 
-          <!-- Photos -->
-          <q-card>
-            <q-card-section>
-              <div class="text-h6 q-mb-md">Photos</div>
-              <q-form @submit="updatePage" class="q-gutter-md">
-                <!-- Logo -->
-                <div>
-                  <div class="text-subtitle2 q-mb-sm">Logo</div>
-                  <div class="row q-gutter-md items-center">
-                    <div class="col-auto">
-                      <q-avatar v-if="logoPreview || pageForm.logo_url" size="80px">
-                        <img 
-                          :src="logoPreview || pageForm.logo_url" 
-                          alt="Logo" 
-                          @error="handleImageError"
-                          @load="console.log('✅ Logo image loaded successfully')"
+              <!-- Logo -->
+              <div>
+                <div class="text-subtitle2 q-mb-sm">Logo</div>
+                <div class="row q-gutter-md items-center">
+                  <div class="col-auto">
+                    <q-avatar v-if="logoPreview || pageForm.logo_url" size="80px">
+                      <img 
+                        :src="logoPreview || pageForm.logo_url" 
+                        alt="Logo" 
+                        @error="handleImageError"
+                        @load="console.log('✅ Logo image loaded successfully')"
+                      />
+                    </q-avatar>
+                    <q-avatar v-else size="80px" color="grey-3">
+                      <q-icon name="image" size="40px" color="grey-6" />
+                    </q-avatar>
+                  </div>
+                  <div class="col">
+                    <q-file
+                      v-model="logoFile"
+                      label="Sélectionner un logo"
+                      accept="image/*"
+                      outlined
+                      @update:model-value="handleLogoFileSelect"
+                      :loading="uploadingLogo"
+                      :disable="uploadingLogo"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="attach_file" />
+                      </template>
+                      <template v-slot:append v-if="pageForm.logo_url">
+                        <q-btn
+                          icon="delete"
+                          flat
+                          dense
+                          round
+                          @click.stop="removeLogo"
+                          :disable="uploadingLogo"
                         />
-                      </q-avatar>
-                      <q-avatar v-else size="80px" color="grey-3">
-                        <q-icon name="image" size="40px" color="grey-6" />
-                      </q-avatar>
-                    </div>
-                    <div class="col">
-                      <q-file
-                        v-model="logoFile"
-                        label="Sélectionner un logo"
-                        accept="image/*"
-                        outlined
-                        @update:model-value="handleLogoFileSelect"
-                        :loading="uploadingLogo"
-                        :disable="uploadingLogo"
-                      >
-                        <template v-slot:prepend>
-                          <q-icon name="attach_file" />
-                        </template>
-                        <template v-slot:append v-if="pageForm.logo_url">
-                          <q-btn
-                            icon="delete"
-                            flat
-                            dense
-                            round
-                            @click.stop="removeLogo"
-                            :disable="uploadingLogo"
-                          />
-                        </template>
-                      </q-file>
-                      <div v-if="uploadingLogo" class="q-mt-sm">
-                        <q-linear-progress :value="logoProgress / 100" color="primary" />
-                        <div class="text-caption text-grey-7 q-mt-xs">Téléchargement en cours...</div>
-                      </div>
+                      </template>
+                    </q-file>
+                    <div v-if="uploadingLogo" class="q-mt-sm">
+                      <q-linear-progress :value="logoProgress / 100" color="primary" />
+                      <div class="text-caption text-grey-7 q-mt-xs">Téléchargement en cours...</div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Cover Photo -->
-                <div>
-                  <div class="text-subtitle2 q-mb-sm">Photo de couverture</div>
-                  <div class="row q-gutter-md items-center">
-                    <div class="col-auto">
-                      <div v-if="coverPreview || pageForm.cover_photo_url" class="cover-preview">
-                        <img 
-                          :src="coverPreview || pageForm.cover_photo_url" 
-                          alt="Cover" 
-                          class="cover-image" 
-                          @error="handleImageError"
-                          @load="console.log('✅ Cover image loaded successfully')"
-                        />
-                      </div>
-                      <div v-else class="cover-placeholder">
-                        <q-icon name="image" size="40px" color="grey-6" />
-                      </div>
+              <!-- Photo de couverture -->
+              <div>
+                <div class="text-subtitle2 q-mb-sm">Photo de couverture</div>
+                <div class="row q-gutter-md items-center">
+                  <div class="col-auto">
+                    <div v-if="coverPreview || pageForm.cover_photo_url" class="cover-preview">
+                      <img 
+                        :src="coverPreview || pageForm.cover_photo_url" 
+                        alt="Cover" 
+                        class="cover-image" 
+                        @error="handleImageError"
+                        @load="console.log('✅ Cover image loaded successfully')"
+                      />
                     </div>
-                    <div class="col">
-                      <q-file
-                        v-model="coverFile"
-                        label="Sélectionner une photo de couverture"
-                        accept="image/*"
-                        outlined
-                        @update:model-value="handleCoverFileSelect"
-                        :loading="uploadingCover"
-                        :disable="uploadingCover"
-                      >
-                        <template v-slot:prepend>
-                          <q-icon name="attach_file" />
-                        </template>
-                        <template v-slot:append v-if="pageForm.cover_photo_url">
-                          <q-btn
-                            icon="delete"
-                            flat
-                            dense
-                            round
-                            @click.stop="removeCover"
-                            :disable="uploadingCover"
-                          />
-                        </template>
-                      </q-file>
-                      <div v-if="uploadingCover" class="q-mt-sm">
-                        <q-linear-progress :value="coverProgress / 100" color="primary" />
-                        <div class="text-caption text-grey-7 q-mt-xs">Téléchargement en cours...</div>
-                      </div>
+                    <div v-else class="cover-placeholder">
+                      <q-icon name="image" size="40px" color="grey-6" />
+                    </div>
+                  </div>
+                  <div class="col">
+                    <q-file
+                      v-model="coverFile"
+                      label="Sélectionner une photo de couverture"
+                      accept="image/*"
+                      outlined
+                      @update:model-value="handleCoverFileSelect"
+                      :loading="uploadingCover"
+                      :disable="uploadingCover"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="attach_file" />
+                      </template>
+                      <template v-slot:append v-if="pageForm.cover_photo_url">
+                        <q-btn
+                          icon="delete"
+                          flat
+                          dense
+                          round
+                          @click.stop="removeCover"
+                          :disable="uploadingCover"
+                        />
+                      </template>
+                    </q-file>
+                    <div v-if="uploadingCover" class="q-mt-sm">
+                      <q-linear-progress :value="coverProgress / 100" color="primary" />
+                      <div class="text-caption text-grey-7 q-mt-xs">Téléchargement en cours...</div>
                     </div>
                   </div>
                 </div>
+              </div>
 
+              <!-- Bouton de sauvegarde unique -->
+              <div class="q-mt-md">
                 <q-btn
                   type="submit"
-                  label="Enregistrer"
+                  label="Enregistrer les modifications"
                   color="primary"
                   :loading="businessStore.loading"
                   unelevated
+                  class="full-width"
                 />
-              </q-form>
-            </q-card-section>
-          </q-card>
-        </div>
+              </div>
+            </q-form>
+          </q-card-section>
+        </q-card>
       </q-tab-panel>
     </q-tab-panels>
+
+    <!-- Modal pour éditer l'URL -->
+    <q-dialog v-model="showEditUrlModal">
+      <q-card style="min-width: 400px">
+        <q-card-section>
+          <div class="text-h6">Modifier l'URL publique</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit="handleUpdateSlug" class="q-gutter-md">
+            <q-input
+              v-model="slugForm.slug"
+              label="URL publique *"
+              outlined
+              :rules="[
+                val => !!val || 'Requis',
+                val => /^[a-z0-9-]+$/.test(val) || 'Seulement lettres minuscules, chiffres et tirets'
+              ]"
+              hint="Partie de l'URL après le domaine (ex: mon-commerce)"
+            >
+              <template v-slot:prepend>
+                <div class="text-grey-7">{{ baseUrl }}/</div>
+              </template>
+            </q-input>
+
+            <div class="row items-center q-mt-md">
+              <div class="col">
+                <div class="text-body2 text-grey-7">Lien complet :</div>
+                <div class="text-body1 text-weight-medium">{{ baseUrl }}/{{ slugForm.slug || '...' }}</div>
+              </div>
+            </div>
+
+            <q-card-actions align="right" class="q-mt-md">
+              <q-btn flat label="Annuler" color="grey" v-close-popup />
+              <q-btn
+                type="submit"
+                label="Enregistrer"
+                color="primary"
+                :loading="businessStore.loading"
+                unelevated
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -289,6 +289,7 @@ const logoFile = ref(null)
 const coverFile = ref(null)
 const logoPreview = ref(null)
 const coverPreview = ref(null)
+const showEditUrlModal = ref(false)
 
 const pageForm = reactive({
   business_name: '',
@@ -362,6 +363,11 @@ async function updatePage() {
   }
 }
 
+async function handleUpdateSlug() {
+  await updateSlug()
+  // Modal will be closed by updateSlug on success
+}
+
 async function updateSlug() {
   if (!slugForm.slug || !/^[a-z0-9-]+$/.test(slugForm.slug)) {
     showNotification({
@@ -388,6 +394,7 @@ async function updateSlug() {
       icon: 'check_circle',
       timeout: 3000
     })
+    showEditUrlModal.value = false
   }
 }
 
