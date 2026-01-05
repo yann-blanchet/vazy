@@ -9,6 +9,43 @@ export const usePageSettingsStore = defineStore('pageSettings', () => {
   const loading = ref(false)
   const profileStore = useProfileStore()
 
+  // Helper function to properly serialize data for IndexedDB
+  function serializeForIndexedDB(data) {
+    if (!data) return data
+    try {
+      // Deep clone and ensure all nested objects/arrays are serializable
+      const serialized = JSON.parse(JSON.stringify(data, (key, value) => {
+        // Handle undefined values
+        if (value === undefined) return null
+        // Ensure arrays are properly serialized
+        if (Array.isArray(value)) {
+          return value.map(item => {
+            if (typeof item === 'object' && item !== null) {
+              return JSON.parse(JSON.stringify(item))
+            }
+            return item
+          })
+        }
+        return value
+      }))
+      return serialized
+    } catch (error) {
+      console.error('Serialization error:', error)
+      // Fallback: create a clean object with only serializable fields
+      return {
+        profile_id: data.profile_id,
+        title: data.title || null,
+        description: data.description || null,
+        photos: Array.isArray(data.photos) ? [...data.photos] : [],
+        instagram: data.instagram || null,
+        phone: data.phone || null,
+        opening_hours: data.opening_hours ? JSON.parse(JSON.stringify(data.opening_hours)) : null,
+        is_published: data.is_published !== false,
+        updated_at: data.updated_at || new Date().toISOString()
+      }
+    }
+  }
+
   async function loadPageSettings() {
     loading.value = true
     try {
@@ -23,7 +60,7 @@ export const usePageSettingsStore = defineStore('pageSettings', () => {
 
       if (data) {
         pageSettings.value = data
-        const serializedData = JSON.parse(JSON.stringify(data))
+        const serializedData = serializeForIndexedDB(data)
         await db.page_settings.put(serializedData)
       } else if (error && error.code !== 'PGRST116') {
         // Try local DB
@@ -47,13 +84,25 @@ export const usePageSettingsStore = defineStore('pageSettings', () => {
     try {
       if (!profileStore.profile) throw new Error('No profile loaded')
 
+      // Ensure opening_hours is properly serialized if present
+      let openingHours = null
+      if (settingsData.opening_hours) {
+        try {
+          openingHours = JSON.parse(JSON.stringify(settingsData.opening_hours))
+        } catch (error) {
+          console.error('Error serializing opening_hours:', error)
+          openingHours = null
+        }
+      }
+
       const newSettings = {
         profile_id: profileStore.profile.id,
         title: settingsData.title || null,
         description: settingsData.description || null,
-        photos: settingsData.photos || [],
+        photos: Array.isArray(settingsData.photos) ? [...settingsData.photos] : [],
         instagram: settingsData.instagram || null,
         phone: settingsData.phone || null,
+        opening_hours: openingHours,
         is_published: settingsData.is_published !== false,
         updated_at: new Date().toISOString()
       }
@@ -73,14 +122,15 @@ export const usePageSettingsStore = defineStore('pageSettings', () => {
 
         if (data) {
           pageSettings.value = data
-          const serializedData = JSON.parse(JSON.stringify(data))
+          const serializedData = serializeForIndexedDB(data)
           await db.page_settings.put(serializedData)
           return { data, error: null }
         }
       } catch (error) {
         console.error('Supabase error:', error)
         // Store locally for offline sync
-        await db.page_settings.add(newSettings)
+        const serializedNewSettings = serializeForIndexedDB(newSettings)
+        await db.page_settings.add(serializedNewSettings)
         pageSettings.value = newSettings
         return { data: newSettings, error }
       }
@@ -105,7 +155,8 @@ export const usePageSettingsStore = defineStore('pageSettings', () => {
       }
 
       // Update locally
-      await db.page_settings.update(pageSettings.value.profile_id, updated)
+      const serializedUpdated = serializeForIndexedDB(updated)
+      await db.page_settings.update(pageSettings.value.profile_id, serializedUpdated)
       pageSettings.value = updated
 
       // Sync to Supabase
@@ -119,7 +170,7 @@ export const usePageSettingsStore = defineStore('pageSettings', () => {
 
         if (data) {
           pageSettings.value = data
-          const serializedData = JSON.parse(JSON.stringify(data))
+          const serializedData = serializeForIndexedDB(data)
           await db.page_settings.update(pageSettings.value.profile_id, serializedData)
         }
       } catch (error) {
@@ -142,4 +193,6 @@ export const usePageSettingsStore = defineStore('pageSettings', () => {
     updatePageSettings
   }
 })
+
+
 

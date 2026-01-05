@@ -179,6 +179,42 @@
           </div>
         </q-card-section>
       </q-card>
+
+      <!-- Horaires d'ouverture -->
+      <q-card flat bordered>
+        <q-card-section class="q-pa-md">
+          <div class="row items-center">
+            <div class="col">
+              <div class="text-subtitle2 text-grey-7 q-mb-xs">Horaires d'ouverture</div>
+              <div class="text-body2">
+                <div v-if="hasOpeningHours" class="q-mt-xs">
+                  <div v-for="(day, key) in dayNames" :key="key" class="q-mb-xs">
+                    <span class="text-weight-medium">{{ day }}:</span>
+                    <span v-if="pageForm.opening_hours?.[key]?.open" class="q-ml-sm">
+                      {{ pageForm.opening_hours[key].start }} - {{ pageForm.opening_hours[key].end }}
+                    </span>
+                    <span v-else class="q-ml-sm text-grey-7">Fermé</span>
+                  </div>
+                </div>
+                <div v-else class="text-grey-7">
+                  Non configuré
+                </div>
+              </div>
+            </div>
+            <div class="col-auto">
+              <q-btn
+                icon="edit"
+                flat
+                dense
+                round
+                size="sm"
+                color="primary"
+                @click="openEditHoursSheet"
+              />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
     </div>
 
     <!-- Bottom Sheet pour éditer l'URL -->
@@ -318,6 +354,68 @@
       </q-card>
     </q-dialog>
 
+    <!-- Bottom Sheet pour éditer les horaires -->
+    <q-dialog v-model="showEditHoursSheet" position="bottom">
+      <q-card class="bottom-sheet-card">
+        <q-card-section class="row items-center q-pb-sm border-bottom">
+          <div class="text-subtitle1">Horaires d'ouverture</div>
+          <q-space />
+          <q-btn icon="close" flat round dense size="sm" @click="showEditHoursSheet = false" />
+        </q-card-section>
+
+        <q-card-section class="q-pt-md">
+          <q-form @submit.prevent="saveOpeningHours" class="q-gutter-md">
+            <div v-for="(day, key) in dayNames" :key="key" class="q-mb-md">
+              <div class="row items-center q-mb-sm">
+                <div class="col">
+                  <div class="text-body1 text-weight-medium">{{ day }}</div>
+                </div>
+                <div class="col-auto">
+                  <q-toggle
+                    v-model="editHoursForm.opening_hours[key].open"
+                    color="primary"
+                    dense
+                  />
+                </div>
+              </div>
+              <div v-if="editHoursForm.opening_hours[key].open" class="row q-gutter-sm">
+                <q-input
+                  v-model="editHoursForm.opening_hours[key].start"
+                  label="Ouverture"
+                  type="time"
+                  outlined
+                  dense
+                  class="col"
+                  :rules="[val => !!val || 'Requis']"
+                />
+                <q-input
+                  v-model="editHoursForm.opening_hours[key].end"
+                  label="Fermeture"
+                  type="time"
+                  outlined
+                  dense
+                  class="col"
+                  :rules="[val => !!val || 'Requis']"
+                />
+              </div>
+            </div>
+
+            <q-card-actions align="right" class="q-mt-lg q-pa-none">
+              <q-btn flat label="Annuler" color="grey" @click="showEditHoursSheet = false" dense />
+              <q-btn
+                type="submit"
+                label="Enregistrer"
+                color="primary"
+                :loading="pageSettingsStore.loading"
+                unelevated
+                dense
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
   </q-page>
 </template>
 
@@ -337,6 +435,7 @@ const businessPhotos = ref([])
 const showEditUrlSheet = ref(false)
 const showEditNameSheet = ref(false)
 const showEditDescriptionSheet = ref(false)
+const showEditHoursSheet = ref(false)
 const editNameForm = reactive({
   title: ''
 })
@@ -347,10 +446,39 @@ const editUrlForm = reactive({
   slug: ''
 })
 
+const dayNames = {
+  monday: 'Lundi',
+  tuesday: 'Mardi',
+  wednesday: 'Mercredi',
+  thursday: 'Jeudi',
+  friday: 'Vendredi',
+  saturday: 'Samedi',
+  sunday: 'Dimanche'
+}
+
+const defaultOpeningHours = {
+  monday: { open: true, start: '09:00', end: '18:00' },
+  tuesday: { open: true, start: '09:00', end: '18:00' },
+  wednesday: { open: true, start: '09:00', end: '18:00' },
+  thursday: { open: true, start: '09:00', end: '18:00' },
+  friday: { open: true, start: '09:00', end: '18:00' },
+  saturday: { open: false, start: '09:00', end: '18:00' },
+  sunday: { open: false, start: '09:00', end: '18:00' }
+}
+
+const editHoursForm = reactive({
+  opening_hours: JSON.parse(JSON.stringify(defaultOpeningHours))
+})
+
 const pageForm = reactive({
   title: '',
   description: '',
-  is_published: true
+  is_published: true,
+  opening_hours: null
+})
+
+const hasOpeningHours = computed(() => {
+  return pageForm.opening_hours && Object.keys(pageForm.opening_hours).length > 0
 })
 
 const baseUrl = computed(() => {
@@ -385,13 +513,15 @@ async function loadPageData() {
     Object.assign(pageForm, {
       title: settings.title || profile?.name || '',
       description: settings.description || '',
-      is_published: settings.is_published !== false // Default to true if not set
+      is_published: settings.is_published !== false, // Default to true if not set
+      opening_hours: settings.opening_hours || null
     })
   } else {
     Object.assign(pageForm, {
       title: profile?.name || '',
       description: '',
-      is_published: true
+      is_published: true,
+      opening_hours: null
     })
   }
   
@@ -399,6 +529,13 @@ async function loadPageData() {
   editNameForm.title = pageForm.title
   editDescriptionForm.description = pageForm.description
   editUrlForm.slug = profile?.slug || ''
+  
+  // Initialize opening hours form
+  if (pageForm.opening_hours) {
+    editHoursForm.opening_hours = JSON.parse(JSON.stringify(pageForm.opening_hours))
+  } else {
+    editHoursForm.opening_hours = JSON.parse(JSON.stringify(defaultOpeningHours))
+  }
   
   // Load photos from page_settings
   if (settings?.photos) {
@@ -420,6 +557,15 @@ function openEditNameSheet() {
 function openEditDescriptionSheet() {
   editDescriptionForm.description = pageForm.description
   showEditDescriptionSheet.value = true
+}
+
+function openEditHoursSheet() {
+  if (pageForm.opening_hours) {
+    editHoursForm.opening_hours = JSON.parse(JSON.stringify(pageForm.opening_hours))
+  } else {
+    editHoursForm.opening_hours = JSON.parse(JSON.stringify(defaultOpeningHours))
+  }
+  showEditHoursSheet.value = true
 }
 
 function openEditUrlSheet() {
@@ -500,6 +646,61 @@ async function saveDescription() {
   showEditDescriptionSheet.value = false
   showNotification({
     message: 'Description mise à jour avec succès',
+    type: 'success',
+    icon: 'check_circle',
+    timeout: 3000
+  })
+}
+
+async function saveOpeningHours() {
+  // Validate that all open days have valid times
+  for (const [key, hours] of Object.entries(editHoursForm.opening_hours)) {
+    if (hours.open) {
+      if (!hours.start || !hours.end) {
+        showNotification({
+          message: `Veuillez renseigner les horaires pour ${dayNames[key]}`,
+          type: 'error',
+          icon: 'error',
+          timeout: 4000
+        })
+        return
+      }
+      if (hours.start >= hours.end) {
+        showNotification({
+          message: `L'heure d'ouverture doit être antérieure à l'heure de fermeture pour ${dayNames[key]}`,
+          type: 'error',
+          icon: 'error',
+          timeout: 4000
+        })
+        return
+      }
+    }
+  }
+
+  const updates = {
+    opening_hours: editHoursForm.opening_hours
+  }
+
+  // Create page_settings if it doesn't exist
+  if (!pageSettingsStore.pageSettings) {
+    await pageSettingsStore.createPageSettings(updates)
+  } else {
+    const { error } = await pageSettingsStore.updatePageSettings(updates)
+    if (error) {
+      showNotification({
+        message: error.message || 'Erreur lors de la mise à jour',
+        type: 'error',
+        icon: 'error',
+        timeout: 4000
+      })
+      return
+    }
+  }
+  
+  pageForm.opening_hours = JSON.parse(JSON.stringify(editHoursForm.opening_hours))
+  showEditHoursSheet.value = false
+  showNotification({
+    message: 'Horaires d\'ouverture mis à jour avec succès',
     type: 'success',
     icon: 'check_circle',
     timeout: 3000

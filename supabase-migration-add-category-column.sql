@@ -71,3 +71,5 @@ CREATE INDEX IF NOT EXISTS idx_services_category ON services(profile_id, categor
 -- Check category distribution
 -- SELECT category, COUNT(*) as count FROM services WHERE category IS NOT NULL GROUP BY category ORDER BY count DESC;
 
+
+
