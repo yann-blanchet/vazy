@@ -285,7 +285,10 @@ async function movePhotoUp(index) {
   
   const currentPhotos = pageSettingsStore.pageSettings?.photos || []
   const newPhotos = [...currentPhotos]
-  [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]]
+  // Swap elements using temporary variable
+  const temp = newPhotos[index - 1]
+  newPhotos[index - 1] = newPhotos[index]
+  newPhotos[index] = temp
   
   const updates = { photos: newPhotos }
   const { error } = await pageSettingsStore.updatePageSettings(updates)
@@ -307,7 +310,10 @@ async function movePhotoDown(index) {
   
   const currentPhotos = pageSettingsStore.pageSettings?.photos || []
   const newPhotos = [...currentPhotos]
-  [newPhotos[index], newPhotos[index + 1]] = [newPhotos[index + 1], newPhotos[index]]
+  // Swap elements using temporary variable
+  const temp = newPhotos[index]
+  newPhotos[index] = newPhotos[index + 1]
+  newPhotos[index + 1] = temp
   
   const updates = { photos: newPhotos }
   const { error } = await pageSettingsStore.updatePageSettings(updates)
